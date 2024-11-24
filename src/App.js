@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import RetroBoard from './retroboard';
 import RefinementBoard from './refinementboard';
 
-// Initialize the WebSocket connection
+//sets the endpoint
 const socket = io('http://localhost:3000');
 
 function App() {
@@ -12,7 +12,7 @@ function App() {
   const [roomId, setRoomId] = useState('');
   const [connected, setConnected] = useState(false);
 
-  // Effect to handle socket events
+  // used to handle the events with the server 
   useEffect(() => {
     socket.on('connect', () => {
       setConnected(true);
@@ -35,7 +35,7 @@ function App() {
     };
   }, []);
 
-  // Function to join a room
+  // for joining a room 
   const joinRoom = (room) => {
     setRoomId(room);
     socket.emit('join-room', room);
@@ -44,11 +44,10 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-[#121212]"> {/* Dark background */}
-        <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4"> {/* Dark header with light text */}
+      <div className="min-h-screen bg-[#121212]">
+        <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
           <div className="container mx-auto text-center">
-            <h1 className="text-white font-bold">AgileFlow</h1> {/* White heading text */}
-            {/* Navigation Links */}
+            <h1 className="text-white font-bold">AgileFlow</h1>
             <nav className="mt-4">
               <NavLink
                 to="/"
@@ -74,14 +73,13 @@ function App() {
 
         <main className="container mx-auto my-10">
           <Routes>
-            {/* Define the Retro Board route */}
+            /* sets the retro board route */
             <Route path="/retro-board" element={<RetroBoard />} />
 
-            {/* Define the Refinement Board route */}
+            /* sets the refinement board route */
             <Route path="/refinement-board" element={<RefinementBoard />} />
           </Routes>
 
-          {/* WebSocket Connection Status */}
           <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
             <section className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
               <h2 className="text-white font-semibold mb-4">Welcome to AgileFlow</h2>
@@ -114,8 +112,8 @@ function App() {
               <p className="text-[#E0E0E0]">{message || 'Waiting for new messages...'}</p>
             </div>
           </div>
-        </main>
-      </div>
+        </main> /*end of "body"*/
+      </div> /* end of main div*/
     </Router>
   );
 }

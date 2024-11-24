@@ -7,14 +7,14 @@ const RefinementBoard = () => {
   const [prediction, setPrediction] = useState('');
   const [predictionsList, setPredictionsList] = useState([]);
   const [isInRoom] = useState(true);
-  const [error, setError] = useState(''); // State to hold validation error messages
+  const [error, setError] = useState('');
 
-  // Handle role selection
+  // role selection
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
   };
 
-  // Handle prediction input change with validation
+  // prediction input
   const handlePredictionChange = (e) => {
     const value = e.target.value;
     setError(''); // Clear any previous errors
@@ -23,24 +23,24 @@ const RefinementBoard = () => {
     } else if (value > 1000) {
       setError('Prediction cannot exceed 1000 days.');
     } else {
-      setPrediction(value); // Only set prediction if valid
+      setPrediction(value); // Only set prediction if valid (not a negative number and less than 1000)
     }
   };
 
   // Handle prediction submission
   const handlePredictionSubmit = () => {
     if (prediction === '' || error) {
-      setError('Please enter a valid prediction.'); // Ensure valid input before submission
+      setError('Please enter a valid prediction.');
       return;
     }
-    setPredictionsList([...predictionsList, { role, prediction }]); // Add prediction to the list
-    setPrediction(''); // Clear the prediction input
-    setError(''); // Clear any error messages
+    setPredictionsList([...predictionsList, { role, prediction }]); // adds prediction to the list
+    setPrediction(''); // clear the input field
+    setError(''); // clear any error messages
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {/* Role Selection */}
+      /* Role Selection */
       {!role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
@@ -59,7 +59,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/* Prediction Form */}
+      /* Prediction Form */
       {role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
           <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
@@ -72,20 +72,19 @@ const RefinementBoard = () => {
               className="border border-[#FF4081] rounded w-full px-2 py-1 mt-2 text-[#E0E0E0] bg-[#121212]"
               placeholder="Enter your predicted time"
             />
-            {/* Error Message */}
             {error && <p className="text-red-500 mt-2">{error}</p>}
           </div>
           <button
             onClick={handlePredictionSubmit}
             className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
-            disabled={!!error || prediction === ''} // Disable button if there’s an error or no input
+            disabled={!!error || prediction === ''} // the buuton won't work if there is an error or no input is provided 
           >
             Submit Prediction
           </button>
         </div>
       )}
 
-      {/* List of predictions */}
+      /* List of predictions */
       {predictionsList.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-4 text-[#03A9F4]">Submitted Predictions:</h3>
@@ -97,8 +96,8 @@ const RefinementBoard = () => {
             ))}
           </ul>
         </div>
-      )}
-    </div>
+      )} /* end of prediction list*/
+    </div> /* end of main div*/
   );
 };
 
