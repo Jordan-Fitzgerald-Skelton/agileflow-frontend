@@ -40,7 +40,7 @@ const RefinementBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      /* Role Selection */
+      {/* Role Selection */}
       {!role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
@@ -59,7 +59,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      /* Prediction Form */
+      {/* Prediction Form */}
       {role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
           <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
@@ -84,7 +84,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      /* List of predictions */
+      {/* List of predictions */}
       {predictionsList.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-4 text-[#03A9F4]">Submitted Predictions:</h3>
@@ -96,7 +96,7 @@ const RefinementBoard = () => {
             ))}
           </ul>
         </div>
-      )} /* end of prediction list*/
+      )} {/* end of prediction list*/}
     </div> /* end of main div*/
   );
 };

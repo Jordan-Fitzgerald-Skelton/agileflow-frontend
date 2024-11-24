@@ -73,10 +73,10 @@ function App() {
 
         <main className="container mx-auto my-10">
           <Routes>
-            /* sets the retro board route */
+            {/* sets the retro board route */}
             <Route path="/retro-board" element={<RetroBoard />} />
 
-            /* sets the refinement board route */
+            {/* sets the refinement board route */}
             <Route path="/refinement-board" element={<RefinementBoard />} />
           </Routes>
 
@@ -112,8 +112,8 @@ function App() {
               <p className="text-[#E0E0E0]">{message || 'Waiting for new messages...'}</p>
             </div>
           </div>
-        </main> /*end of "body"*/
-      </div> /* end of main div*/
+        </main> {/*end of "body"*/}
+      </div> {/*end of main div*/}
     </Router>
   );
 }

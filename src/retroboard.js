@@ -20,10 +20,10 @@ const RetroBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      /* Creates a grid layout for each section*/
+      {/* Creates a grid layout for each section*/}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
 
-        /* What did go well*/
+        {/* What did go well*/}
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2 text-[#39D353]">What did go well</h3>
           <input
@@ -45,7 +45,7 @@ const RetroBoard = () => {
           >
             Add
           </button>
-          /*creates a list and inserts every new comment and an item in the list*/
+          {/*creates a list and inserts every new comment and an item in the list*/}
           <ul className="mt-4">
             {goWellComments.map((comment, index) => (
               <li key={index} className="text-[#E0E0E0] mb-1">{comment}</li>
@@ -53,7 +53,7 @@ const RetroBoard = () => {
           </ul>
         </div>
 
-        /*What didn't go well*/
+        {/*What didn't go well*/}
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2 text-[#FF4081]">What didn't go well</h3>
           <input
@@ -75,7 +75,7 @@ const RetroBoard = () => {
           >
             Add
           </button>
-          /*creates a list and inserts every new comment and an item in the list*/
+          {/*creates a list and inserts every new comment and an item in the list*/}
           <ul className="mt-4">
             {didntGoWellComments.map((comment, index) => (
               <li key={index} className="text-[#E0E0E0] mb-1">{comment}</li>
@@ -83,7 +83,7 @@ const RetroBoard = () => {
           </ul>
         </div>
 
-        /*Areas for improvement*/
+        {/*Areas for improvement*/}
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2 text-[#03A9F4]">Areas for improvement</h3>
           <input
@@ -105,7 +105,7 @@ const RetroBoard = () => {
           >
             Add
           </button>
-          /*creates a list and inserts every new comment and an item in the list*/
+          {/*creates a list and inserts every new comment and an item in the list*/}
           <ul className="mt-4">
             {areasForImprovementComments.map((comment, index) => (
               <li key={index} className="text-[#E0E0E0] mb-1">{comment}</li>
@@ -113,7 +113,7 @@ const RetroBoard = () => {
           </ul>
         </div>
 
-        /*Actions*/
+        {/*Actions*/}
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2 text-[#9C27B0]">Actions</h3>
           <input
@@ -135,15 +135,15 @@ const RetroBoard = () => {
           >
             Add
           </button>
-          /*creates a list and inserts every new comment and an item in the list*/
+          {/*creates a list and inserts every new comment and an item in the list*/}
           <ul className="mt-4">
             {actionsComments.map((comment, index) => (
               <li key={index} className="text-[#E0E0E0] mb-1">{comment}</li>
             ))}
           </ul>
         </div>
-      </div> /*grid end*/
-    </div> /* main div end*/
+      </div> {/*grid end*/}
+    </div> /*main div end*/
   );
 };
 
