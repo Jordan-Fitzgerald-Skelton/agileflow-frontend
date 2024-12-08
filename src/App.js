@@ -8,15 +8,18 @@ import LoginButton from './auth/login';
 import LogoutButton from './auth/logout';
 import Profile from './auth/profile';
 
-//sets the endpoint
+// Set the endpoint for socket.io
 const socket = io('http://localhost:3000');
 
 function App() {
   const [message, setMessage] = useState('');
   const [roomId, setRoomId] = useState('');
   const [connected, setConnected] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [protectedData, setProtectedData] = useState(null);
 
-  const { isAuthenticated, isLoading } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -40,11 +43,49 @@ function App() {
     };
   }, []);
 
-  // for joining a room 
+  // Fetch protected data after authentication
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProtectedData();
+    }
+  }, [isAuthenticated]);
+
+  const fetchProtectedData = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:3000/api/protected', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      setProtectedData(data);
+    } catch (error) {
+      console.error('Error fetching protected data:', error);
+    }
+  };
+
   const joinRoom = (room) => {
     setRoomId(room);
     socket.emit('join-room', room);
     console.log(`Joined room: ${room}`);
+  };
+
+  const createRoom = async () => {
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch('http://localhost:3000/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newRoomName, adminId: 'admin-id-placeholder' }),
+      });
+      const createdRoom = await response.json();
+      setRooms((prevRooms) => [...prevRooms, createdRoom.room]);
+      setNewRoomName('');
+    } catch (error) {
+      console.error('Error creating room:', error);
+    }
   };
 
   // Show a loading message while Auth0 is initializing
@@ -88,44 +129,39 @@ function App() {
           </header>
 
           <main className="container mx-auto my-10">
-            <Profile /> {/* Optional: Show user profile */}
+            <Profile />
             <Routes>
               <Route path="/retro-board" element={<RetroBoard />} />
               <Route path="/refinement-board" element={<RefinementBoard />} />
             </Routes>
 
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
-              <section className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
-                <h2 className="text-white font-semibold mb-4">Welcome to AgileFlow</h2>
-                <p className="text-[#E0E0E0]">Click on "Retro Board" or "Refinement Board" above to start your session.</p>
-              </section>
+              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Protected Data</h3>
+              <pre className="text-[#E0E0E0]">{protectedData ? JSON.stringify(protectedData, null, 2) : 'Loading...'}</pre>
             </div>
 
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Socket.io Status</h3>
-              {connected ? (
-                <p className="text-[#03A9F4]">Connected to Server</p>
-              ) : (
-                <p className="text-[#FF4081]">Connecting...</p>
-              )}
-              <div className="mt-4">
-                <button
-                  onClick={() => joinRoom('room1')}
-                  className="bg-[#03A9F4] text-white px-4 py-2 rounded mr-2 hover:bg-[#0288D1]"
-                >
-                  Join Room 1
-                </button>
-                <button
-                  onClick={() => joinRoom('room2')}
-                  className="bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
-                >
-                  Join Room 2
-                </button>
-              </div>
-              <div className="mt-4">
-                <h4 className="text-lg font-semibold text-[#E0E0E0]">Room: {roomId || 'No room joined'}</h4>
-                <p className="text-[#E0E0E0]">{message || 'Waiting for new messages...'}</p>
-              </div>
+              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Create a Room</h3>
+              <input
+                type="text"
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                placeholder="Room Name"
+                className="bg-[#333333] text-white p-2 rounded"
+              />
+              <button
+                onClick={createRoom}
+                className="bg-[#03A9F4] text-white px-4 py-2 rounded ml-2 hover:bg-[#0288D1]"
+              >
+                Create Room
+              </button>
+              <ul className="mt-4 text-[#E0E0E0]">
+                {rooms.map((room) => (
+                  <li key={room.id} className="my-2">
+                    {room.name} - <button onClick={() => joinRoom(room.id)}>Join</button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </main>
         </div>
