@@ -10,11 +10,13 @@ const Profile = () => {
 
   return (
     isAuthenticated && (
-      <div>
-        <img src={user.picture} alt={user.name} />
-        <h2>{user.name}</h2>
-        <p>{user.email}</p>
-      </div>
+      <div className="profile-container">
+        <img
+          src={user.picture}
+          alt={user.name}
+          className="w-12 h-12" // Tailwind classes for size and rounding
+        />
+    </div>
     )
   );
 };

@@ -9,7 +9,7 @@ import LogoutButton from './auth/logout';
 import Profile from './auth/profile';
 
 // Set the endpoint for socket.io
-const socket = io('http://localhost:3000');
+const socket = io('https://localhost:3000');
 
 function App() {
   const [message, setMessage] = useState('');
@@ -102,7 +102,7 @@ function App() {
       ) : (
         <div className="min-h-screen bg-[#121212]">
           <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
-            <div className="container mx-auto text-center">
+            <div className="container mx-auto flex justify-between items-center">
               <h1 className="text-white font-bold">AgileFlow</h1>
               <nav className="mt-4">
                 <NavLink
@@ -123,22 +123,19 @@ function App() {
                 >
                   Refinement Board
                 </NavLink>
-                <LogoutButton />
+                <NavLink>
+                <LogoutButton className="mx-2"/>
+                </NavLink>
               </nav>
+              <Profile />
             </div>
           </header>
 
           <main className="container mx-auto my-10">
-            <Profile />
             <Routes>
               <Route path="/retro-board" element={<RetroBoard />} />
               <Route path="/refinement-board" element={<RefinementBoard />} />
             </Routes>
-
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Protected Data</h3>
-              <pre className="text-[#E0E0E0]">{protectedData ? JSON.stringify(protectedData, null, 2) : 'Loading...'}</pre>
-            </div>
 
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
               <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Create a Room</h3>
