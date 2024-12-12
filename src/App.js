@@ -84,7 +84,8 @@ function App() {
       }
       const createdRoom = await response.json();
       console.log('Room created:', createdRoom);
-      setNewRoomName(''); // Clear the room name input field
+      // Clear the room name input field
+      setNewRoomName('');
       //clears any errors
       setError('');
     } catch (error) {
