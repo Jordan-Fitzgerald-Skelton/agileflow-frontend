@@ -8,93 +8,99 @@ import LoginButton from './auth/login';
 import LogoutButton from './auth/logout';
 import Profile from './auth/profile';
 
-// Set the endpoint for socket.io
-const socket = io('https://localhost:3000');
+//Where the server is running
+const socket = io('http://localhost:3000');
 
 function App() {
-  const [message, setMessage] = useState('');
-  const [roomId, setRoomId] = useState('');
-  const [connected, setConnected] = useState(false);
-  const [rooms, setRooms] = useState([]);
+  //create a room
   const [newRoomName, setNewRoomName] = useState('');
-  const [protectedData, setProtectedData] = useState(null);
-
-  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+  //join a room
+  const [inviteCode, setInviteCode] = useState('');
+  const [error, setError] = useState('');
+  //for Auth0 authentication 
+  const { isAuthenticated, isLoading } = useAuth0();
 
   useEffect(() => {
     socket.on('connect', () => {
-      setConnected(true);
       console.log('Connected to Socket.io server');
     });
-
     socket.on('disconnect', () => {
-      setConnected(false);
       console.log('Disconnected from Socket.io server');
     });
-
-    socket.on('new-user', (message) => {
-      setMessage(message);
-    });
-
     return () => {
       socket.off('connect');
       socket.off('disconnect');
-      socket.off('new-user');
     };
   }, []);
 
-  // Fetch protected data after authentication
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchProtectedData();
+  //for joining a room
+  const joinRoom = async () => {
+    if (!inviteCode) {
+      setError('Please provide a valid invite code.');
+      return;
     }
-  }, [isAuthenticated]);
-
-  const fetchProtectedData = async () => {
     try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch('http://localhost:3000/api/protected', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch('http://localhost:3000/api/rooms/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inviteCode }),
       });
-      const data = await response.json();
-      setProtectedData(data);
+
+      if (!response.ok) {
+        throw new Error('Error joining room');
+      }
+      const roomData = await response.json();
+      console.log('Room joined:', roomData);
+      //clears the input field for the invite code
+      setInviteCode('');
+      //clears any errors
+      setError('');
     } catch (error) {
-      console.error('Error fetching protected data:', error);
+      setError('Failed to join the room');
+      console.error('Error joining room:', error);
     }
   };
 
-  const joinRoom = (room) => {
-    setRoomId(room);
-    socket.emit('join-room', room);
-    console.log(`Joined room: ${room}`);
-  };
-
+  //for creating a room
   const createRoom = async () => {
+    if (!newRoomName) {
+      setError('Please provide a valid room name.');
+      return;
+    }
     try {
-      const token = await getAccessTokenSilently();
+      const roomData = { name: newRoomName };
       const response = await fetch('http://localhost:3000/api/rooms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: newRoomName, adminId: 'admin-id-placeholder' }),
+        body: JSON.stringify(roomData),
       });
+
+      if (!response.ok) {
+        throw new Error('Error creating room');
+      }
       const createdRoom = await response.json();
-      setRooms((prevRooms) => [...prevRooms, createdRoom.room]);
-      setNewRoomName('');
+      console.log('Room created:', createdRoom);
+      setNewRoomName(''); // Clear the room name input field
+      //clears any errors
+      setError('');
     } catch (error) {
+      setError('Failed to create room');
       console.error('Error creating room:', error);
     }
   };
 
-  // Show a loading message while Auth0 is initializing
+  //show a loading message while Auth0 is starting
   if (isLoading) {
     return <div>Loading authentication...</div>;
   }
 
   return (
     <Router>
+      {/*starts when a user is authenticated*/} 
       {!isAuthenticated ? (
         <div className="min-h-screen bg-[#121212] flex items-center justify-center">
           <LoginButton />
@@ -104,30 +110,43 @@ function App() {
           <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
             <div className="container mx-auto flex justify-between items-center">
               <h1 className="text-white font-bold">AgileFlow</h1>
-              <nav className="mt-4">
+              {/*nav bar*/}
+              <nav className="mt-4 flex space-x-6">
                 <NavLink
                   to="/"
-                  className={({ isActive }) => (isActive ? 'text-[#03A9F4] mx-2 font-bold' : 'text-[#E0E0E0] mx-2')}
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-[#03A9F4] text-lg font-bold px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                      : 'text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                  }
                 >
                   Home
                 </NavLink>
                 <NavLink
                   to="/retro-board"
-                  className={({ isActive }) => (isActive ? 'text-[#03A9F4] mx-2 font-bold' : 'text-[#E0E0E0] mx-2')}
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-[#03A9F4] text-lg font-bold px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                      : 'text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                  }
                 >
                   Retro Board
                 </NavLink>
                 <NavLink
                   to="/refinement-board"
-                  className={({ isActive }) => (isActive ? 'text-[#03A9F4] mx-2 font-bold' : 'text-[#E0E0E0] mx-2')}
+                  className={({ isActive }) =>
+                    isActive
+                      ? 'text-[#03A9F4] text-lg font-bold px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                      : 'text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded'
+                  }
                 >
                   Refinement Board
                 </NavLink>
-                <NavLink>
-                <LogoutButton className="mx-2"/>
-                </NavLink>
               </nav>
-              <Profile />
+              <div className="flex items-center space-x-4">
+                <Profile />
+                <LogoutButton />
+              </div>
             </div>
           </header>
 
@@ -138,27 +157,27 @@ function App() {
             </Routes>
 
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Create a Room</h3>
-              <input
-                type="text"
-                value={newRoomName}
-                onChange={(e) => setNewRoomName(e.target.value)}
-                placeholder="Room Name"
-                className="bg-[#333333] text-white p-2 rounded"
-              />
-              <button
-                onClick={createRoom}
-                className="bg-[#03A9F4] text-white px-4 py-2 rounded ml-2 hover:bg-[#0288D1]"
-              >
-                Create Room
-              </button>
-              <ul className="mt-4 text-[#E0E0E0]">
-                {rooms.map((room) => (
-                  <li key={room.id} className="my-2">
-                    {room.name} - <button onClick={() => joinRoom(room.id)}>Join</button>
-                  </li>
-                ))}
-              </ul>
+              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">What is the Refinement Board for?</h3>
+              <p className="text-[#E0E0E0]">
+                The Refinement Board is designed to streamline the process involved in evaluating and vote on the length of time, 
+                different roles of a team would expect a particular ticket to take to complete during refinement meetings. 
+                Traditionally in refinement meetings would involve team members from Development, QA, and Product teams reviewing ticket descriptions, 
+                validating acceptance criteria, and estimating the length of time required to complete each ticket. Instead of relying on direct 
+                messages to share estimates, causing delays, the Refinement Board provides a space where everyone can contribute their inputs 
+                together abd simultaneously.
+              </p>
+            </div>
+
+            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
+              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">What is the Retro Board for?</h3>
+              <p className="text-[#E0E0E0]">
+                The Retro Board helps teams conduct effective retrospective meetings by organizing feedback into four sections: 
+                "what went well", "what didn’t go well", "areas for improvement", and "actions". These meetings are an impportant part of reflecting 
+                on the past sprint and identifying ways to help the team work more effectivly moving forward. This process results in "action" items being created,
+                with tasks for members of the team to work on to help the team. Traditionally, team leaders manually create action 
+                tickets based on the discussion, which can be time-consuming and lead to delays. The Retro Board plans to automates this process 
+                by generating alerts for "action" items. This will help to ensures that the team can work on improvements much faster and without delay.
+              </p>
             </div>
           </main>
         </div>

@@ -6,24 +6,42 @@ const RefinementBoard = () => {
   const [role, setRole] = useState('');
   const [prediction, setPrediction] = useState('');
   const [predictionsList, setPredictionsList] = useState([]);
-  const [isInRoom] = useState(true);
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [roomCreated, setRoomCreated] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
 
-  // role selection
+  // Handle room creation
+  const handleCreateRoom = () => {
+    setRoomCreated(true);
+    setIsInRoom(true);
+  };
+
+  // Handle joining a room
+  const handleJoinRoom = () => {
+    if (inviteCode.trim()) {
+      setRoomCreated(true);
+      setIsInRoom(true);
+    } else {
+      setError('Please enter a valid invite code.');
+    }
+  };
+
+  // Role selection
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
   };
 
-  // prediction input
+  // Prediction input
   const handlePredictionChange = (e) => {
     const value = e.target.value;
-    setError(''); // Clear any previous errors
+    setError('');
     if (value < 0) {
       setError('Prediction cannot be negative.');
     } else if (value > 1000) {
       setError('Prediction cannot exceed 1000 days.');
     } else {
-      setPrediction(value); // Only set prediction if valid (not a negative number and less than 1000)
+      setPrediction(value);
     }
   };
 
@@ -33,15 +51,66 @@ const RefinementBoard = () => {
       setError('Please enter a valid prediction.');
       return;
     }
-    setPredictionsList([...predictionsList, { role, prediction }]); // adds prediction to the list
-    setPrediction(''); // clear the input field
-    setError(''); // clear any error messages
+    setPredictionsList([...predictionsList, { role, prediction }]);
+    setPrediction('');
+    setError('');
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
+      {/* Room Creation/Joining */}
+      {!isInRoom && !roomCreated && (
+        <div className="flex space-x-4">
+          {/* Left Column: List of Rooms with Join Room Buttons (For Display Only) */}
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
+            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
+            <ul className="space-y-2">
+              {/* Loop through an array of rooms to display them */}
+              {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
+                <li key={index} className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2">
+                  <span>{room}</span>
+                  {/* "Join Room" button styled as green for display only */}
+                  <button
+                    className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
+                    disabled
+                  >
+                    Join Room
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* Right Column: Room Creation/Joining */}
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
+            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
+            <button
+              onClick={handleCreateRoom}
+              className="bg-[#03A9F4] text-white px-4 py-2 rounded hover:opacity-80"
+            >
+              Create Room
+            </button>
+            <div className="mt-4">
+              <input
+                type="text"
+                placeholder="Enter invite code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
+              />
+              <button
+                onClick={handleJoinRoom}
+                className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
+              >
+                Join Room
+              </button>
+              {error && <p className="text-red-500 mt-2">{error}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Role Selection */}
-      {!role && isInRoom && (
+      {isInRoom && !role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
           <select
@@ -77,7 +146,7 @@ const RefinementBoard = () => {
           <button
             onClick={handlePredictionSubmit}
             className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
-            disabled={!!error || prediction === ''} // the buuton won't work if there is an error or no input is provided 
+            disabled={!!error || prediction === ''}
           >
             Submit Prediction
           </button>
@@ -96,8 +165,8 @@ const RefinementBoard = () => {
             ))}
           </ul>
         </div>
-      )} {/* end of prediction list*/}
-    </div> /* end of main div*/
+      )}
+    </div>
   );
 };
 
