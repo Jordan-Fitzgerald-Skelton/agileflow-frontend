@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 
 const RetroBoard = () => {
-  // Comment section states
   const [goWellComments, setGoWellComments] = useState([]);
   const [didntGoWellComments, setDidntGoWellComments] = useState([]);
   const [areasForImprovementComments, setAreasForImprovementComments] = useState([]);
   const [actionsComments, setActionsComments] = useState([]);
 
-  // Room management states
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
-  const [isInRoom, setIsInRoom] = useState(false); // Whether the user has joined a room
-  const [roomCreated, setRoomCreated] = useState(false); // Whether a room is created
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [roomCreated, setRoomCreated] = useState(false);
 
-  // Handle comment additions to sections
+  //handles adding comments to each section
   const handleAddComment = (section, comment) => {
     if (section === 'goWell') {
       setGoWellComments([...goWellComments, comment]);
@@ -26,13 +24,13 @@ const RetroBoard = () => {
     }
   };
 
-  // Handle room creation
+  //handles room creation
   const handleCreateRoom = () => {
     setRoomCreated(true);
     setIsInRoom(true);
   };
 
-  // Handle room joining
+  //handle room joining
   const handleJoinRoom = () => {
     if (inviteCode) {
       setIsInRoom(true);
@@ -43,14 +41,12 @@ const RetroBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {/* Room Management Section (Left and Right Columns) */}
       {!isInRoom && !roomCreated && (
         <div className="flex space-x-4">
-          {/* Left Column: List of Rooms with Join Room Buttons (For Display Only) */}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
             <ul className="space-y-2">
-              {/*loop through an array of rooms to display them*/}
+              {/*loops through the array of rooms to display them*/}
               {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
                 <li key={index} className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2">
                   <span>{room}</span>
@@ -64,7 +60,7 @@ const RetroBoard = () => {
               ))}
             </ul>
           </div>
-          {/*Room creation and joining*/}
+          {/*room creation and joining*/}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
             <button
@@ -92,12 +88,10 @@ const RetroBoard = () => {
           </div>
         </div>
       )}
-
-      {/* Display Retro Board after joining or creating a room */}
       {(isInRoom || roomCreated) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
 
-          {/* What did go well */}
+          {/*what did go well*/}
           <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2 text-[#39D353]">What did go well</h3>
             <input
@@ -112,7 +106,7 @@ const RetroBoard = () => {
                 const comment = document.getElementById('goWellComment').value;
                 if (comment) {
                   handleAddComment('goWell', comment);
-                  // Clear input after adding
+                  //clear the input field after adding
                   document.getElementById('goWellComment').value = '';
                 }
               }}
@@ -126,7 +120,7 @@ const RetroBoard = () => {
             </ul>
           </div>
 
-          {/* What didn't go well */}
+          {/*what didn't go well*/}
           <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2 text-[#FF4081]">What didn't go well</h3>
             <input
@@ -141,7 +135,7 @@ const RetroBoard = () => {
                 const comment = document.getElementById('didntGoWellComment').value;
                 if (comment) {
                   handleAddComment('didntGoWell', comment);
-                  // Clear input after adding
+                  //clear the input field after adding
                   document.getElementById('didntGoWellComment').value = '';
                 }
               }}
@@ -155,7 +149,7 @@ const RetroBoard = () => {
             </ul>
           </div>
 
-          {/* Areas for improvement */}
+          {/*areas for improvement*/}
           <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2 text-[#03A9F4]">Areas for improvement</h3>
             <input
@@ -170,7 +164,7 @@ const RetroBoard = () => {
                 const comment = document.getElementById('areasForImprovementComment').value;
                 if (comment) {
                   handleAddComment('areasForImprovement', comment);
-                  // Clear input after adding
+                  //clear the input field after adding
                   document.getElementById('areasForImprovementComment').value = '';
                 }
               }}
@@ -184,7 +178,7 @@ const RetroBoard = () => {
             </ul>
           </div>
 
-          {/* Actions */}
+          {/*actions*/}
           <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-2 text-[#9C27B0]">Actions</h3>
             <input
@@ -199,7 +193,7 @@ const RetroBoard = () => {
                 const comment = document.getElementById('actionsComment').value;
                 if (comment) {
                   handleAddComment('actions', comment);
-                  // Clear input after adding
+                  //clear the input field after adding
                   document.getElementById('actionsComment').value = '';
                 }
               }}

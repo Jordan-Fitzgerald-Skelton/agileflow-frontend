@@ -11,13 +11,13 @@ const RefinementBoard = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
 
-  // Handle room creation
+  //handles room creation
   const handleCreateRoom = () => {
     setRoomCreated(true);
     setIsInRoom(true);
   };
 
-  // Handle joining a room
+  //handles joining a room
   const handleJoinRoom = () => {
     if (inviteCode.trim()) {
       setRoomCreated(true);
@@ -27,12 +27,12 @@ const RefinementBoard = () => {
     }
   };
 
-  // Role selection
+  //role selection
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
   };
 
-  // Prediction input
+  //prediction inputs
   const handlePredictionChange = (e) => {
     const value = e.target.value;
     setError('');
@@ -45,7 +45,7 @@ const RefinementBoard = () => {
     }
   };
 
-  // Handle prediction submission
+  //handles the prediction submissions
   const handlePredictionSubmit = () => {
     if (prediction === '' || error) {
       setError('Please enter a valid prediction.');
@@ -58,18 +58,15 @@ const RefinementBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {/* Room Creation/Joining */}
       {!isInRoom && !roomCreated && (
         <div className="flex space-x-4">
-          {/* Left Column: List of Rooms with Join Room Buttons (For Display Only) */}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
             <ul className="space-y-2">
-              {/* Loop through an array of rooms to display them */}
+              {/*loops through the array of rooms to display them*/}
               {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
                 <li key={index} className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2">
                   <span>{room}</span>
-                  {/* "Join Room" button styled as green for display only */}
                   <button
                     className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
                     disabled
@@ -80,7 +77,7 @@ const RefinementBoard = () => {
               ))}
             </ul>
           </div>
-          {/* Right Column: Room Creation/Joining */}
+          {/*room creation and joining*/}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
             <button
@@ -109,7 +106,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/* Role Selection */}
+      {/*role selection drop down*/}
       {isInRoom && !role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
@@ -128,7 +125,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/* Prediction Form */}
+      {/*prediction form*/}
       {role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
           <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
@@ -153,7 +150,7 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/* List of predictions */}
+      {/*Display the list of predictions*/}
       {predictionsList.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-4 text-[#03A9F4]">Submitted Predictions:</h3>
