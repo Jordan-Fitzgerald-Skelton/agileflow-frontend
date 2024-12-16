@@ -62,7 +62,7 @@ const RetroBoard = () => {
           </div>
           {/*room creation and joining*/}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
             <button
               onClick={handleCreateRoom}
               className="bg-[#03A9F4] text-white px-4 py-2 rounded hover:opacity-80"
