@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
 
 const RefinementBoard = () => {
   const roles = ['Developer', 'QA', 'UI', 'UX', 'Production', 'Architect'];
@@ -10,29 +13,77 @@ const RefinementBoard = () => {
   const [roomCreated, setRoomCreated] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  //handles room creation
-  const handleCreateRoom = () => {
-    setRoomCreated(true);
-    setIsInRoom(true);
-  };
+  useEffect(() => {
+    socket.on('newPrediction', (data) => {
+      setPredictionsList((prevPredictions) => [...prevPredictions, data]);
+    });
 
-  //handles joining a room
-  const handleJoinRoom = () => {
-    if (inviteCode.trim()) {
+    return () => {
+      socket.off('newPrediction');
+    };
+  }, []);
+
+  //Handles when a user creates a room
+  const handleCreateRoom = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roomName: 'RefinementRoom' }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create room.');
+      }
+      const result = await response.json();
       setRoomCreated(true);
       setIsInRoom(true);
-    } else {
-      setError('Please enter a valid invite code.');
+      setInviteCode(result.room.inviteCode);
+      setSuccess('Room created successfully.');
+      setError('');
+    } catch (error) {
+      setError(error.message);
+      setSuccess('');
     }
   };
 
-  //role selection
+  //Handles when a user joins a room
+  const handleJoinRoom = async () => {
+    if (!inviteCode.trim()) {
+      setError('Please enter a valid invite code.');
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:3000/api/rooms/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ inviteCode }),
+      });
+      if (!response.ok) {
+        throw new Error('Invalid invite code or failed to join the room.');
+      }
+      const result = await response.json();
+      setRoomCreated(true);
+      setIsInRoom(true);
+      setError('');
+      setSuccess('Joined room successfully.');
+    } catch (error) {
+      setError(error.message);
+      setSuccess('');
+    }
+  };
+
+  //Role selection
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
   };
 
-  //prediction inputs
+  //Takes the users inputs
   const handlePredictionChange = (e) => {
     const value = e.target.value;
     setError('');
@@ -45,15 +96,21 @@ const RefinementBoard = () => {
     }
   };
 
-  //handles the prediction submissions
+  //Handles when the usre submits a prediction
   const handlePredictionSubmit = () => {
     if (prediction === '' || error) {
       setError('Please enter a valid prediction.');
       return;
     }
-    setPredictionsList([...predictionsList, { role, prediction }]);
-    setPrediction('');
-    setError('');
+    socket.emit('submitPrediction', { roomName: 'RefinementRoom', role, prediction: Number(prediction) }, (response) => {
+      if (response.success) {
+        setPredictionsList([...predictionsList, { role, prediction }]);
+        setPrediction('');
+        setError('');
+      } else {
+        setError(response.message);
+      }
+    });
   };
 
   return (
@@ -63,7 +120,6 @@ const RefinementBoard = () => {
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
             <ul className="space-y-2">
-              {/*loops through the array of rooms to display them*/}
               {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
                 <li key={index} className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2">
                   <span>{room}</span>
@@ -77,7 +133,6 @@ const RefinementBoard = () => {
               ))}
             </ul>
           </div>
-          {/*room creation and joining*/}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
             <button
@@ -101,12 +156,12 @@ const RefinementBoard = () => {
                 Join Room
               </button>
               {error && <p className="text-red-500 mt-2">{error}</p>}
+              {success && <p className="text-green-500 mt-2">{success}</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/*role selection drop down*/}
       {isInRoom && !role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
@@ -125,7 +180,6 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/*prediction form*/}
       {role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
           <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
@@ -150,7 +204,6 @@ const RefinementBoard = () => {
         </div>
       )}
 
-      {/*Display the list of predictions*/}
       {predictionsList.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-4 text-[#03A9F4]">Submitted Predictions:</h3>

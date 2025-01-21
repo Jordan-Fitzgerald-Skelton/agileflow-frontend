@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, NavLink } from 'react-router-dom';
 import io from 'socket.io-client';
+import axios from 'axios';
+import createRoomForm from './createRoomForm';
 import RetroBoard from './retroboard';
 import RefinementBoard from './refinementboard';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -8,16 +10,16 @@ import LoginButton from './auth/login';
 import LogoutButton from './auth/logout';
 import Profile from './auth/profile';
 
-//Where the server is running
 const socket = io('http://localhost:3000');
 
 function App() {
-  //create a room
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
-  //join a room
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
-  //for Auth0 authentication 
+  const [success, setSuccess] = useState('');
+  const [currentRoom, setCurrentRoom] = useState(null);
+  const [predictions, setPredictions] = useState([]);
   const { isAuthenticated, isLoading } = useAuth0();
 
   useEffect(() => {
@@ -27,81 +29,52 @@ function App() {
     socket.on('disconnect', () => {
       console.log('Disconnected from Socket.io server');
     });
+    socket.on('newPrediction', (data) => {
+      setPredictions((prevPredictions) => [...prevPredictions, data]);
+    });
     return () => {
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('newPrediction');
     };
   }, []);
 
-  //for joining a room
+  const createRoom = async ({ roomName, isPersistent }) => {
+    try {
+      const response = await axios.post('http://localhost:3000/api/rooms', { roomName, isPersistent });
+      setNewRoomName('');
+      setError('');
+      setSuccess('Room created successfully.');
+    } catch (error) {
+      setError('Failed to create room.');
+      console.error('Error creating room:', error);
+    }
+  };
+
   const joinRoom = async () => {
     if (!inviteCode) {
       setError('Please provide a valid invite code.');
       return;
     }
     try {
-      const response = await fetch('http://localhost:3000/api/rooms/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ inviteCode }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error joining room');
-      }
-      const roomData = await response.json();
-      console.log('Room joined:', roomData);
-      //clears the input field for the invite code
+      const response = await axios.post('http://localhost:3000/api/rooms/join', { inviteCode });
+      const roomData = response.data;
+      setCurrentRoom(roomData.room);
       setInviteCode('');
-      //clears any errors
       setError('');
+      setSuccess('Room joined successfully.');
     } catch (error) {
-      setError('Failed to join the room');
+      setError('Failed to join the room.');
       console.error('Error joining room:', error);
     }
   };
 
-  //for creating a room
-  const createRoom = async () => {
-    if (!newRoomName) {
-      setError('Please provide a valid room name.');
-      return;
-    }
-    try {
-      const roomData = { name: newRoomName };
-      const response = await fetch('http://localhost:3000/api/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(roomData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error creating room');
-      }
-      const createdRoom = await response.json();
-      console.log('Room created:', createdRoom);
-      // Clear the room name input field
-      setNewRoomName('');
-      //clears any errors
-      setError('');
-    } catch (error) {
-      setError('Failed to create room');
-      console.error('Error creating room:', error);
-    }
-  };
-
-  //show a loading message while Auth0 is starting
   if (isLoading) {
     return <div>Loading authentication...</div>;
   }
 
   return (
     <Router>
-      {/*starts when a user is authenticated*/} 
       {!isAuthenticated ? (
         <div className="min-h-screen bg-[#121212] flex items-center justify-center">
           <LoginButton />
@@ -111,7 +84,6 @@ function App() {
           <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
             <div className="container mx-auto flex justify-between items-center">
               <h1 className="text-white font-bold">AgileFlow</h1>
-              {/*nav bar*/}
               <nav className="mt-4 flex space-x-6">
                 <NavLink
                   to="/"
@@ -160,26 +132,34 @@ function App() {
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
               <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">What is the Refinement Board for?</h3>
               <p className="text-[#E0E0E0]">
-                The Refinement Board is designed to streamline the process involved in evaluating and vote on the length of time, 
-                different roles of a team would expect a particular ticket to take to complete during refinement meetings. 
-                Traditionally in refinement meetings would involve team members from Development, QA, and Product teams reviewing ticket descriptions, 
-                validating acceptance criteria, and estimating the length of time required to complete each ticket. Instead of relying on direct 
-                messages to share estimates, causing delays, the Refinement Board provides a space where everyone can contribute their inputs 
-                together abd simultaneously.
+                The Refinement Board is designed to help teams with calculating the estimated time that they believe a ticket should take 
+                to complete during each part of its development. e.g A ticket has been created that is related to changing a buttons color. 
+                Each member of the dev team would provided an estimated time they believe this chnage should take to complete. All of their 
+                estimates would be collected and an average generated. Then the members of the QA team would provided an estimated time they 
+                believe this ticket should take to test. Their estimates would be collected and an avergae generated. The ticket would then be 
+                assigned a estimated completion time based on adding both averaged estimates togther. This board aims to allow for this process
+                to be completed simultaneously and automaticly calculate and present the predictions in a readable format.
+
               </p>
             </div>
 
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
               <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">What is the Retro Board for?</h3>
               <p className="text-[#E0E0E0]">
-                The Retro Board helps teams conduct effective retrospective meetings by organizing feedback into four sections: 
-                "what went well", "what didn’t go well", "areas for improvement", and "actions". These meetings are an impportant part of reflecting 
-                on the past sprint and identifying ways to help the team work more effectivly moving forward. This process results in "action" items being created,
-                with tasks for members of the team to work on to help the team. Traditionally, team leaders manually create action 
-                tickets based on the discussion, which can be time-consuming and lead to delays. The Retro Board plans to automates this process 
-                by generating alerts for "action" items. This will help to ensures that the team can work on improvements much faster and without delay.
+                The Retro Board is designed to help teams review the sprint that took place by providing feedback under 3 different heading.
+                They are "what went well", "what didn't go well" and "areas of improvement". After discussing these topics a new item is created
+                under a heading called "actions". These "actions" are a task that is assigned to the member of the team to complete, that should help
+                the team improve the processes for the next sprint. An example "action" would be to create a document to describe a the release process
+                for a particular change that needs to be completed correctly in order for a smooth release to occure. The "actions" are typcaly created 
+                manually by a team lead and the assign an notify the assigned member of the team of the ticket. This board aims to combine this functionality 
+                by allowing for users to provide feedback under each heading and to automatticly create the notifications for the "action" that needs to be completed
+                to the assigned member of the team. 
               </p>
             </div>
+
+            {/*displays an errors or success messages*/}
+            {error && <div className="bg-red-500 text-white p-2 rounded">{error}</div>}
+            {success && <div className="bg-green-500 text-white p-2 rounded">{success}</div>}
           </main>
         </div>
       )}
