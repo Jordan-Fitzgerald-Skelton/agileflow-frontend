@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import CreateRoomForm from './createRoomForm';
 
 const socket = io('http://localhost:3000');
 
@@ -10,12 +11,16 @@ const RefinementBoard = () => {
   const [prediction, setPrediction] = useState('');
   const [predictionsList, setPredictionsList] = useState([]);
   const [isInRoom, setIsInRoom] = useState(false);
-  const [roomCreated, setRoomCreated] = useState(false);
+  //This will store the room details (room_id and invite code)
+  const [roomDetails, setRoomDetails] = useState(null);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  //State for the popup form
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+    //Waits for new predictions from the server
     socket.on('newPrediction', (data) => {
       setPredictionsList((prevPredictions) => [...prevPredictions, data]);
     });
@@ -25,35 +30,34 @@ const RefinementBoard = () => {
     };
   }, []);
 
-  //Handles when a user creates a room
-  const handleCreateRoom = async () => {
+  //Handles the room creation
+  const handleCreateRoom = async ({ roomName, isPersistent }) => {
     try {
       const response = await fetch('http://localhost:3000/api/rooms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ roomName: 'RefinementRoom' }),
+        body: JSON.stringify({ roomName, isPersistent }),
       });
       if (!response.ok) {
         throw new Error('Failed to create room.');
       }
       const result = await response.json();
-      setRoomCreated(true);
+      setRoomDetails(result.room); // Store the room details
       setIsInRoom(true);
-      setInviteCode(result.room.inviteCode);
-      setSuccess('Room created successfully.');
+      setSuccess(`Room created! Invite Code: ${result.room.invite_code}`);
       setError('');
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
       setSuccess('');
     }
   };
 
-  //Handles when a user joins a room
+  //Handles joining a room
   const handleJoinRoom = async () => {
-    if (!inviteCode.trim()) {
-      setError('Please enter a valid invite code.');
+    if (!inviteCode.trim() || inviteCode.length !== 6) {
+      setError('Please enter a valid 6-character invite code.');
       return;
     }
     try {
@@ -68,22 +72,24 @@ const RefinementBoard = () => {
         throw new Error('Invalid invite code or failed to join the room.');
       }
       const result = await response.json();
-      setRoomCreated(true);
+       //Stores the room details
+      setRoomDetails(result.room);
       setIsInRoom(true);
+      setSuccess(`Joined room successfully! Room ID: ${result.room.room_id}`);
       setError('');
-      setSuccess('Joined room successfully.');
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
       setSuccess('');
     }
   };
 
-  //Role selection
+  //For role selection
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
+    setError('');
   };
 
-  //Takes the users inputs
+  //Validates and then set the prediction
   const handlePredictionChange = (e) => {
     const value = e.target.value;
     setError('');
@@ -96,107 +102,106 @@ const RefinementBoard = () => {
     }
   };
 
-  //Handles when the usre submits a prediction
+  //Submits the prediction
   const handlePredictionSubmit = () => {
-    if (prediction === '' || error) {
-      setError('Please enter a valid prediction.');
+    if (!role) {
+      setError('Please select a role before submitting.');
       return;
     }
-    socket.emit('submitPrediction', { roomName: 'RefinementRoom', role, prediction: Number(prediction) }, (response) => {
-      if (response.success) {
-        setPredictionsList([...predictionsList, { role, prediction }]);
-        setPrediction('');
-        setError('');
-      } else {
-        setError(response.message);
+    if (!roomDetails?.room_id) {
+      setError('Room details are missing. Please create or join a room.');
+      return;
+    }
+    socket.emit(
+      'submitPrediction',
+      { roomName: roomDetails.room_id, role, prediction: Number(prediction) },
+      (response) => {
+        if (response.success) {
+          setPrediction('');
+          setError('');
+        } else {
+          setError(response.message);
+        }
       }
-    });
+    );
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {!isInRoom && !roomCreated && (
+      {!isInRoom && (
         <div className="flex space-x-4">
-          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
-            <ul className="space-y-2">
-              {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
-                <li key={index} className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2">
-                  <span>{room}</span>
-                  <button
-                    className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
-                    disabled
-                  >
-                    Join Room
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Refinement Board</h2>
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-[#03A9F4]">Create a Room</h2>
             <button
-              onClick={handleCreateRoom}
-              className="bg-[#03A9F4] text-white px-4 py-2 rounded hover:opacity-80"
+              //Opens the popup form
+              onClick={() => setIsModalOpen(true)}
+              className="bg-[#03A9F4] text-white px-4 py-2 rounded mt-4 hover:opacity-80"
             >
               Create Room
             </button>
-            <div className="mt-4">
-              <input
-                type="text"
-                placeholder="Enter invite code"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
-              />
-              <button
-                onClick={handleJoinRoom}
-                className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
-              >
-                Join Room
-              </button>
-              {error && <p className="text-red-500 mt-2">{error}</p>}
-              {success && <p className="text-green-500 mt-2">{success}</p>}
-            </div>
+          </div>
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-[#03A9F4]">Join a Room</h2>
+            <input
+              type="text"
+              placeholder="Enter invite code"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="border border-[#03A9F4] rounded w-full px-4 py-2 mt-2 bg-[#121212] text-[#E0E0E0]"
+            />
+            <button
+              onClick={handleJoinRoom}
+              className="bg-[#4CAF50] text-white px-4 py-2 rounded mt-4 hover:opacity-80"
+            >
+              Join Room
+            </button>
           </div>
         </div>
       )}
 
+      <CreateRoomForm
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setError('');
+        }}
+        onCreateRoom={handleCreateRoom}
+      />
+
+      {/* Role selection */}
       {isInRoom && !role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
           <select
             value={role}
             onChange={(e) => handleAssignRole(e.target.value)}
-            className="border border-[#03A9F4] rounded w-full px-2 py-1 mt-2 text-[#E0E0E0] bg-[#121212]"
+            className="border border-[#03A9F4] rounded w-full px-4 py-2 bg-[#121212] text-[#E0E0E0]"
           >
             <option value="">Select a role...</option>
-            {roles.map((roleOption) => (
-              <option key={roleOption} value={roleOption}>
-                {roleOption}
+            {roles.map((r) => (
+              <option key={r} value={r}>
+                {r}
               </option>
             ))}
           </select>
         </div>
       )}
 
+      {/*Prediction submission*/}
       {role && isInRoom && (
-        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
-          <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
-          <div>
-            <label className="block text-lg font-semibold text-[#E0E0E0]">Your Prediction (in days)</label>
-            <input
-              type="number"
-              value={prediction}
-              onChange={handlePredictionChange}
-              className="border border-[#FF4081] rounded w-full px-2 py-1 mt-2 text-[#E0E0E0] bg-[#121212]"
-              placeholder="Enter your predicted time"
-            />
-            {error && <p className="text-red-500 mt-2">{error}</p>}
-          </div>
+        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
+          <h2 className="text-2xl font-semibold text-[#FF4081]">Make Your Prediction</h2>
+          <input
+            type="number"
+            value={prediction}
+            onChange={handlePredictionChange}
+            className="border border-[#FF4081] rounded w-full px-4 py-2 mt-2 bg-[#121212] text-[#E0E0E0]"
+            placeholder="Enter your prediction (in days)"
+          />
+          {error && <p className="text-red-500 mt-2">{error}</p>}
           <button
             onClick={handlePredictionSubmit}
-            className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
+            className="bg-[#FF4081] text-white px-4 py-2 rounded mt-4 hover:bg-[#D81B60]"
             disabled={!!error || prediction === ''}
           >
             Submit Prediction
@@ -204,18 +209,23 @@ const RefinementBoard = () => {
         </div>
       )}
 
+      {/*Displays the predictions*/}
       {predictionsList.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-xl font-semibold mb-4 text-[#03A9F4]">Submitted Predictions:</h3>
-          <ul>
+        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
+          <h3 className="text-xl font-semibold text-[#03A9F4]">Submitted Predictions</h3>
+          <ul className="mt-4">
             {predictionsList.map((item, index) => (
-              <li key={index} className="text-[#E0E0E0] mb-2">
-                {item.role} predicted {item.prediction} days
+              <li key={index} className="text-[#E0E0E0]">
+                {item.role}: {item.prediction} days
               </li>
             ))}
           </ul>
         </div>
       )}
+
+      {/* Error and Success Messages */}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
+      {success && <p className="text-green-500 mt-4">{success}</p>}
     </div>
   );
 };
