@@ -14,7 +14,7 @@ const Profile = () => {
         <img
           src={user.picture}
           alt={user.name}
-          className="w-12 h-12" // Tailwind classes for size and rounding
+          className="w-12 h-12"
         />
     </div>
     )

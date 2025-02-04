@@ -147,22 +147,6 @@ function App() {
                 next sprint.
               </p>
             </div>
-
-            {/*Display an error or success messages*/}
-            {error && <div className="bg-red-500 text-white p-2 rounded mb-4">{error}</div>}
-            {success && <div className="bg-green-500 text-white p-2 rounded mb-4">{success}</div>}
-
-            {/*Current Room Information */}
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 my-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0]">Current Room</h3>
-              {currentRoom ? (
-                <p className="text-[#E0E0E0]">
-                  Room Name: {currentRoom.room_id}, Invite Code: {currentRoom.invite_code}
-                </p>
-              ) : (
-                <p className="text-[#E0E0E0]">No active room. Join or create a room to get started.</p>
-              )}
-            </div>
           </main>
         </div>
       )}
