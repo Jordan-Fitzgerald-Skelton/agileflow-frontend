@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
+import axios from 'axios';
 import { Dialog } from '@headlessui/react';
-
-const socket = io('http://localhost:3000');
 
 function CreateRoomForm({ isOpen, onClose, onCreateRoom }) {
   const [roomName, setRoomName] = useState('');
@@ -56,7 +54,7 @@ function CreateRoomForm({ isOpen, onClose, onCreateRoom }) {
   );
 }
 
-const RefinementBoard = () => {
+const RefinementBoard = ({ socket }) => {
   const roles = ['Developer', 'QA', 'UI', 'UX', 'Production', 'Architect'];
 
   const [role, setRole] = useState('');
@@ -78,62 +76,46 @@ const RefinementBoard = () => {
     return () => {
       socket.off('newPrediction', handleNewPrediction);
     };
-  }, []);
+  }, [socket]);
 
   const handleCreateRoom = async ({ roomName, isPersistent }) => {
     try {
-      const response = await fetch('http://localhost:3000/api/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomName, isPersistent }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to create room.');
-      }
-      const result = await response.json();
-      setRoomDetails(result.room); // Store room details
+      const response = await axios.post('http://localhost:3000/rooms', { roomName, isPersistent });
+      const { room } = response.data;
+      setRoomDetails(room);
       setIsInRoom(true);
-      setSuccess(`Room created! Invite Code: ${result.room.invite_code}`);
+      setSuccess(`Room created! Invite Code: ${room.invite_code}`);
       setError('');
       setIsModalOpen(false);
     } catch (err) {
-      setError(err.message);
+      setError('Failed to create room. Please try again.');
       setSuccess('');
     }
   };
 
-  // Handles joining an existing room
   const handleJoinRoom = async () => {
     if (!inviteCode.trim() || inviteCode.length !== 6) {
       setError('Please enter a valid 6-character invite code.');
       return;
     }
+
     try {
-      const response = await fetch('http://localhost:3000/api/rooms/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inviteCode }),
-      });
-      if (!response.ok) {
-        throw new Error('Invalid invite code or failed to join the room.');
-      }
-      const result = await response.json();
-      setRoomDetails(result.room);
+      const response = await axios.post('http://localhost:3000/rooms/join', { inviteCode });
+      const { room } = response.data;
+      setRoomDetails(room);
       setIsInRoom(true);
-      setSuccess(`Joined room successfully! Room ID: ${result.room.room_id}`);
+      setSuccess(`Joined room successfully! Room ID: ${room.room_id}`);
       setError('');
     } catch (err) {
-      setError(err.message);
+      setError('Invalid invite code or failed to join the room.');
       setSuccess('');
     }
   };
 
-  // Assign a role to the user
   const handleAssignRole = (selectedRole) => {
     setRole(selectedRole);
   };
 
-  // Validates and updates the predictions 
   const handlePredictionChange = (e) => {
     const value = e.target.value;
     setError('');
@@ -146,7 +128,6 @@ const RefinementBoard = () => {
     }
   };
 
-  // Submit the prediction via the socket connection
   const handlePredictionSubmit = () => {
     if (!role) {
       setError('Please select a role before submitting.');
@@ -158,7 +139,7 @@ const RefinementBoard = () => {
     }
     socket.emit(
       'submitPrediction',
-      { roomName: roomDetails.room_id, role, prediction: Number(prediction) },
+      { roomId: roomDetails.room_id, role, prediction: Number(prediction) },
       (response) => {
         if (response.success) {
           setPrediction('');
@@ -169,13 +150,10 @@ const RefinementBoard = () => {
       }
     );
   };
-
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {/* If not in a room, show room selection/creation UI */}
       {!isInRoom && (
         <div className="flex space-x-4">
-          {/* Available Rooms Section */}
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
             <ul className="space-y-2">
@@ -195,8 +173,7 @@ const RefinementBoard = () => {
               ))}
             </ul>
           </div>
-
-          {/* Room Creation and Join Section */}
+  
           <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
             <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
             <button
@@ -224,8 +201,7 @@ const RefinementBoard = () => {
           </div>
         </div>
       )}
-
-      {/* Include the CreateRoomForm modal */}
+  
       <CreateRoomForm
         isOpen={isModalOpen}
         onClose={() => {
@@ -234,8 +210,7 @@ const RefinementBoard = () => {
         }}
         onCreateRoom={handleCreateRoom}
       />
-
-      {/* Once in a room, show role selection if not yet assigned */}
+  
       {isInRoom && !role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
           <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
@@ -253,8 +228,7 @@ const RefinementBoard = () => {
           </select>
         </div>
       )}
-
-      {/* Prediction submission section */}
+  
       {role && isInRoom && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
           <h2 className="text-2xl font-semibold text-[#FF4081]">Make Your Prediction</h2>
@@ -275,8 +249,7 @@ const RefinementBoard = () => {
           </button>
         </div>
       )}
-
-      {/* Display submitted predictions */}
+  
       {predictionsList.length > 0 && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
           <h3 className="text-xl font-semibold text-[#03A9F4]">Submitted Predictions</h3>
@@ -289,12 +262,11 @@ const RefinementBoard = () => {
           </ul>
         </div>
       )}
-
-      {/* Global error and success messages */}
+  
       {error && <p className="text-red-500 mt-4">{error}</p>}
       {success && <p className="text-green-500 mt-4">{success}</p>}
     </div>
   );
-};
-
-export default RefinementBoard;
+  };
+  
+  export default RefinementBoard;  
