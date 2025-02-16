@@ -1,27 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Dialog } from '@headlessui/react';
 
-function CreateRoomForm({ isOpen, onClose, onCreateRoom }) {
+const RefinementBoard = ({ socket }) => {
+  const [rooms, setRooms] = useState([]);
+  const [inviteCode, setInviteCode] = useState('');
+  const [error, setError] = useState('');
   const [roomName, setRoomName] = useState('');
   const [isPersistent, setIsPersistent] = useState(false);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    async function fetchRooms() {
+      try {
+        const response = await axios.get('http://localhost:3000/rooms');
+        setRooms(response.data.rooms);
+      } catch (err) {
+        console.error('Error fetching rooms:', err);
+      }
+    }
+    fetchRooms();
+  }, []);
+
+  const handleCreateRoom = async (e) => {
     e.preventDefault();
-    onCreateRoom({ roomName, isPersistent });
-    setRoomName('');
-    setIsPersistent(false);
-    onClose();
+    try {
+      const response = await axios.post('http://localhost:3000/rooms', { roomName, isPersistent });
+      setRooms((prev) => [...prev, response.data.room]);
+      setRoomName('');
+      setIsPersistent(false);
+    } catch (err) {
+      setError('Failed to create room. Please try again.');
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    if (!inviteCode.trim() || inviteCode.length !== 6) {
+      setError('Please enter a valid 6-character invite code.');
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:3000/rooms/join', { inviteCode });
+      console.log('Joined Room:', response.data.room);
+    } catch (err) {
+      setError('Invalid invite code or failed to join the room.');
+    }
   };
 
   return (
-    <Dialog open={isOpen} onClose={onClose} className="fixed z-10 inset-0 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen">
-        <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
-        <div className="relative bg-white rounded max-w-sm mx-auto p-6">
-          <Dialog.Title className="text-xl font-bold">Create Room</Dialog.Title>
-          <form onSubmit={handleSubmit}>
-            <div className="mt-4">
+    <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
+      <div className="flex space-x-4">
+        <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
+          <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
+          <ul className="space-y-2">
+            {rooms.length > 0 ? (
+              rooms.map((room) => (
+                <li
+                  key={room.room_id}
+                  className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2"
+                >
+                  <span>{room.name}</span>
+                  <button className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80">
+                    Join Room
+                  </button>
+                </li>
+              ))
+            ) : (
+              <p>No available rooms</p>
+            )}
+          </ul>
+        </div>
+
+        <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
+          <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
+          <form onSubmit={handleCreateRoom}>
+            <div>
               <label className="block text-sm font-medium text-gray-700">Room Name</label>
               <input
                 type="text"
@@ -48,225 +100,26 @@ function CreateRoomForm({ isOpen, onClose, onCreateRoom }) {
               </button>
             </div>
           </form>
+          <div className="mt-4">
+            <input
+              type="text"
+              placeholder="Enter invite code"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
+            />
+            <button
+              onClick={handleJoinRoom}
+              className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
+            >
+              Join Room
+            </button>
+            {error && <p className="text-red-500 mt-2">{error}</p>}
+          </div>
         </div>
       </div>
-    </Dialog>
-  );
-}
-
-const RefinementBoard = ({ socket }) => {
-  const roles = ['Developer', 'QA', 'UI', 'UX', 'Production', 'Architect'];
-
-  const [role, setRole] = useState('');
-  const [prediction, setPrediction] = useState('');
-  const [predictionsList, setPredictionsList] = useState([]);
-  const [isInRoom, setIsInRoom] = useState(false);
-  const [roomDetails, setRoomDetails] = useState(null);
-  const [inviteCode, setInviteCode] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  useEffect(() => {
-    const handleNewPrediction = (data) => {
-      setPredictionsList((prev) => [...prev, data]);
-    };
-
-    socket.on('newPrediction', handleNewPrediction);
-    return () => {
-      socket.off('newPrediction', handleNewPrediction);
-    };
-  }, [socket]);
-
-  const handleCreateRoom = async ({ roomName, isPersistent }) => {
-    try {
-      const response = await axios.post('http://localhost:3000/rooms', { roomName, isPersistent });
-      const { room } = response.data;
-      setRoomDetails(room);
-      setIsInRoom(true);
-      setSuccess(`Room created! Invite Code: ${room.invite_code}`);
-      setError('');
-      setIsModalOpen(false);
-    } catch (err) {
-      setError('Failed to create room. Please try again.');
-      setSuccess('');
-    }
-  };
-
-  const handleJoinRoom = async () => {
-    if (!inviteCode.trim() || inviteCode.length !== 6) {
-      setError('Please enter a valid 6-character invite code.');
-      return;
-    }
-
-    try {
-      const response = await axios.post('http://localhost:3000/rooms/join', { inviteCode });
-      const { room } = response.data;
-      setRoomDetails(room);
-      setIsInRoom(true);
-      setSuccess(`Joined room successfully! Room ID: ${room.room_id}`);
-      setError('');
-    } catch (err) {
-      setError('Invalid invite code or failed to join the room.');
-      setSuccess('');
-    }
-  };
-
-  const handleAssignRole = (selectedRole) => {
-    setRole(selectedRole);
-  };
-
-  const handlePredictionChange = (e) => {
-    const value = e.target.value;
-    setError('');
-    if (value < 0) {
-      setError('Prediction cannot be negative.');
-    } else if (value > 1000) {
-      setError('Prediction cannot exceed 1000 days.');
-    } else {
-      setPrediction(value);
-    }
-  };
-
-  const handlePredictionSubmit = () => {
-    if (!role) {
-      setError('Please select a role before submitting.');
-      return;
-    }
-    if (!roomDetails?.room_id) {
-      setError('Room details are missing. Please create or join a room.');
-      return;
-    }
-    socket.emit(
-      'submitPrediction',
-      { roomId: roomDetails.room_id, role, prediction: Number(prediction) },
-      (response) => {
-        if (response.success) {
-          setPrediction('');
-          setError('');
-        } else {
-          setError(response.message);
-        }
-      }
-    );
-  };
-  return (
-    <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      {!isInRoom && (
-        <div className="flex space-x-4">
-          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
-            <ul className="space-y-2">
-              {['Room 1', 'Room 2', 'Room 3'].map((room, index) => (
-                <li
-                  key={index}
-                  className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2"
-                >
-                  <span>{room}</span>
-                  <button
-                    className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
-                    disabled
-                  >
-                    Join Room
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-  
-          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-[#03A9F4] text-white px-4 py-2 rounded hover:opacity-80"
-            >
-              Create Room
-            </button>
-            <div className="mt-4">
-              <input
-                type="text"
-                placeholder="Enter invite code"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
-              />
-              <button
-                onClick={handleJoinRoom}
-                className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
-              >
-                Join Room
-              </button>
-              {error && <p className="text-red-500 mt-2">{error}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-  
-      <CreateRoomForm
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setError('');
-        }}
-        onCreateRoom={handleCreateRoom}
-      />
-  
-      {isInRoom && !role && (
-        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
-          <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Select Your Role</h2>
-          <select
-            value={role}
-            onChange={(e) => handleAssignRole(e.target.value)}
-            className="border border-[#03A9F4] rounded w-full px-4 py-2 bg-[#121212] text-[#E0E0E0]"
-          >
-            <option value="">Select a role...</option>
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-  
-      {role && isInRoom && (
-        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
-          <h2 className="text-2xl font-semibold text-[#FF4081]">Make Your Prediction</h2>
-          <input
-            type="number"
-            value={prediction}
-            onChange={handlePredictionChange}
-            className="border border-[#FF4081] rounded w-full px-4 py-2 mt-2 bg-[#121212] text-[#E0E0E0]"
-            placeholder="Enter your prediction (in days)"
-          />
-          {error && <p className="text-red-500 mt-2">{error}</p>}
-          <button
-            onClick={handlePredictionSubmit}
-            className="bg-[#FF4081] text-white px-4 py-2 rounded mt-4 hover:bg-[#D81B60]"
-            disabled={Boolean(error) || prediction === ''}
-          >
-            Submit Prediction
-          </button>
-        </div>
-      )}
-  
-      {predictionsList.length > 0 && (
-        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 mt-6">
-          <h3 className="text-xl font-semibold text-[#03A9F4]">Submitted Predictions</h3>
-          <ul className="mt-4">
-            {predictionsList.map((item, index) => (
-              <li key={index} className="text-[#E0E0E0]">
-                {item.role}: {item.prediction} days
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-  
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-      {success && <p className="text-green-500 mt-4">{success}</p>}
     </div>
   );
-  };
-  
-  export default RefinementBoard;  
+};
+
+export default RefinementBoard;
