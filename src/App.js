@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import LoginButton from "./auth/login";
@@ -9,33 +9,46 @@ import RefinementBoard from "./components/refinementboard";
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth0();
+  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
 
-  if (isLoading) return <div>Loading authentication...</div>;
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
+  if (isLoading) return <div className="loading-screen">Loading authentication...</div>;
 
   return (
     <Router>
       {!isAuthenticated ? (
-        <div className="min-h-screen bg-[#121212] flex items-center justify-center">
+        <div className="auth-container">
           <LoginButton />
         </div>
       ) : (
-        <div className="min-h-screen bg-[#121212]">
-          <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
-            <div className="container mx-auto flex justify-between items-center">
-              <h1 className="text-white font-bold">AgileFlow</h1>
-              <nav className="mt-4 flex space-x-6">
-                <NavLink to="/" className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">Home</NavLink>
-                <NavLink to="/retro-board" className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">Retro Board</NavLink>
-                <NavLink to="/refinement-board" className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">Refinement Board</NavLink>
+        <div className="app-container">
+          <header className="navbar">
+            <div className="container">
+              <h1 className="logo">AgileFlow</h1>
+              <nav className="nav-links">
+                <NavLink to="/" className="nav-link">Home</NavLink>
+                <NavLink to="/retro-board" className="nav-link">Retro Board</NavLink>
+                <NavLink to="/refinement-board" className="nav-link">Refinement Board</NavLink>
               </nav>
-              <div className="flex items-center space-x-4">
+              <div className="user-controls">
                 <Profile />
+                <button className="theme-toggle" onClick={toggleTheme}>
+                  {theme === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}
+                </button>
                 <LogoutButton />
               </div>
             </div>
           </header>
 
-          <main className="container mx-auto my-10">
+          <main className="content">
             <Routes>
               <Route path="/retro-board" element={<RetroBoard />} />
               <Route path="/refinement-board" element={<RefinementBoard />} />
