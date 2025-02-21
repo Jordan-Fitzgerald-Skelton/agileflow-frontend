@@ -14,55 +14,96 @@ export const SocketProvider = ({ children }) => {
   const [socketError, setSocketError] = useState(null);
 
   useEffect(() => {
-    const newSocket = io(process.env.REACT_APP_BACKEND_URL);
+    // Starts the socket connection
+    const newSocket = io(process.env.REACT_APP_BACKEND_URL, {
+      reconnectionAttempts: 5, // Try reconnecting 5 times before failing
+      transports: ["websocket"],
+    });
+
     setSocket(newSocket);
 
-    axios.get(`${process.env.REACT_APP_BACKEND_URL}/rooms`)
-      .then((res) => setRooms(res.data.rooms))
-      .catch((err) => console.error("Error fetching rooms:", err));
+    // Fetch initial room data
+    const fetchRooms = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/rooms`);
+        setRooms(response.data.rooms);
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      }
+    };
 
-    //Listen for the real-time updates
-    newSocket.on("updateRooms", setRooms);
-    newSocket.on("comment_added", setComments);
-    newSocket.on("prediction_submitted", setPredictions);
-    newSocket.on("action_added", (newAction) => setActions((prev) => [...prev, newAction]));
+    fetchRooms();
 
-    //Error Handling
-    newSocket.on("connect_error", () => setSocketError("WebSocket connection failed. Retrying..."));
-    newSocket.on("disconnect", () => setSocketError("Disconnected from server."));
+    //Event listeners
+    const handleRoomUpdate = (updatedRooms) => setRooms(updatedRooms);
+    const handleCommentAdded = (newComment) => setComments((prev) => [...prev, newComment]);
+    const handlePredictionSubmitted = (newPrediction) => setPredictions((prev) => [...prev, newPrediction]);
+    const handleActionAdded = (newAction) => setActions((prev) => [...prev, newAction]);
+    const handleConnectError = () => setSocketError("WebSocket connection failed. Retrying...");
+    const handleDisconnect = () => setSocketError("Disconnected from server.");
 
-    return () => newSocket.disconnect();
+    //Register the socket events
+    newSocket.on("updateRooms", handleRoomUpdate);
+    newSocket.on("comment_added", handleCommentAdded);
+    newSocket.on("prediction_submitted", handlePredictionSubmitted);
+    newSocket.on("action_added", handleActionAdded);
+    newSocket.on("connect_error", handleConnectError);
+    newSocket.on("disconnect", handleDisconnect);
+
+    // Cleanup function (removes event listeners when disconnected)
+    return () => {
+      newSocket.off("updateRooms", handleRoomUpdate);
+      newSocket.off("comment_added", handleCommentAdded);
+      newSocket.off("prediction_submitted", handlePredictionSubmitted);
+      newSocket.off("action_added", handleActionAdded);
+      newSocket.off("connect_error", handleConnectError);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.disconnect();
+    };
   }, []);
 
-  //Room functions
+  //Room Management
   const createRoom = (roomName, isPersistent) => {
-    if (socket) socket.emit("createRoom", { roomName, isPersistent });
+    socket?.emit("createRoom", { roomName, isPersistent });
   };
+
   const joinRoom = (roomId) => {
-    if (socket) socket.emit("join_room", roomId);
+    socket?.emit("join_room", roomId);
   };
+
   const leaveRoom = (roomId) => {
-    if (socket) socket.emit("leave_room", roomId);
+    socket?.emit("leave_room", roomId);
   };
 
-  //Retro Board functions
+  //Retro Board
   const sendComment = (roomId, comment) => {
-    if (socket) socket.emit("add_comment", { roomId, comment });
-  };
-  const sendAction = (roomId, userName, description) => {
-    if (socket) socket.emit("create_action", { roomId, userName, description });
+    socket?.emit("add_comment", { roomId, comment });
   };
 
-  //Refinement Board functions
+  const sendAction = (roomId, userName, description) => {
+    socket?.emit("create_action", { roomId, userName, description });
+  };
+
+  //Refinement Board
   const sendPrediction = (roomId, role, name, prediction) => {
-    if (socket) socket.emit("submit_prediction", { roomId, role, name, prediction });
+    socket?.emit("submit_prediction", { roomId, role, name, prediction });
   };
 
   return (
     <SocketContext.Provider
       value={{
-        socket, rooms, comments, predictions, actions,
-        createRoom, joinRoom, leaveRoom, sendComment, sendPrediction, sendAction, socketError
+        socket,
+        rooms,
+        comments,
+        predictions,
+        actions,
+        createRoom,
+        joinRoom,
+        leaveRoom,
+        sendComment,
+        sendPrediction,
+        sendAction,
+        socketError,
       }}
     >
       {children}
