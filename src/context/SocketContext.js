@@ -1,109 +1,152 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import axios from "axios";
 
+const SERVER_URL = "http://localhost:5000"; // Update if needed
 const SocketContext = createContext();
+
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [comments, setComments] = useState([]);
+  const [roomId, setRoomId] = useState(null);
   const [predictions, setPredictions] = useState([]);
-  const [actions, setActions] = useState([]);
-  const [socketError, setSocketError] = useState(null);
 
   useEffect(() => {
-    // Starts the socket connection
-    const newSocket = io(process.env.REACT_APP_BACKEND_URL, {
-      reconnectionAttempts: 5, // Try reconnecting 5 times before failing
-      transports: ["websocket"],
-    });
+    const newSocket = io(SERVER_URL, { transports: ["websocket"] });
+
+    newSocket.on("connect", () => console.log("Connected to WebSocket server"));
+    newSocket.on("disconnect", () => console.log("Disconnected from WebSocket server"));
+
+    newSocket.on("prediction_submitted", (data) => setPredictions((prev) => [...prev, data]));
+    newSocket.on("new_comment", (comment) => console.log("New comment:", comment));
+    newSocket.on("action_added", (action) => console.log("New action item:", action));
 
     setSocket(newSocket);
 
-    // Fetch initial room data
-    const fetchRooms = async () => {
-      try {
-        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/rooms`);
-        setRooms(response.data.rooms);
-      } catch (error) {
-        console.error("Error fetching rooms:", error);
-      }
-    };
-
-    fetchRooms();
-
-    //Event listeners
-    const handleRoomUpdate = (updatedRooms) => setRooms(updatedRooms);
-    const handleCommentAdded = (newComment) => setComments((prev) => [...prev, newComment]);
-    const handlePredictionSubmitted = (newPrediction) => setPredictions((prev) => [...prev, newPrediction]);
-    const handleActionAdded = (newAction) => setActions((prev) => [...prev, newAction]);
-    const handleConnectError = () => setSocketError("WebSocket connection failed. Retrying...");
-    const handleDisconnect = () => setSocketError("Disconnected from server.");
-
-    //Register the socket events
-    newSocket.on("updateRooms", handleRoomUpdate);
-    newSocket.on("comment_added", handleCommentAdded);
-    newSocket.on("prediction_submitted", handlePredictionSubmitted);
-    newSocket.on("action_added", handleActionAdded);
-    newSocket.on("connect_error", handleConnectError);
-    newSocket.on("disconnect", handleDisconnect);
-
-    // Cleanup function (removes event listeners when disconnected)
-    return () => {
-      newSocket.off("updateRooms", handleRoomUpdate);
-      newSocket.off("comment_added", handleCommentAdded);
-      newSocket.off("prediction_submitted", handlePredictionSubmitted);
-      newSocket.off("action_added", handleActionAdded);
-      newSocket.off("connect_error", handleConnectError);
-      newSocket.off("disconnect", handleDisconnect);
-      newSocket.disconnect();
-    };
+    return () => newSocket.disconnect();
   }, []);
 
-  //Room Management
-  const createRoom = (roomName, isPersistent) => {
-    socket?.emit("createRoom", { roomName, isPersistent });
+  //Creating and joining the new room
+  const createAndJoinRoom = async (name, email, roomType) => {
+    try {
+      const res = await fetch(`${SERVER_URL}/${roomType}/create/room`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setRoomId(data.room_id);
+        await joinRoom(name, email, data.invite_code, roomType);
+      }
+    } catch (error) {
+      console.error("Error creating room:", error);
+    }
   };
 
-  const joinRoom = (roomId) => {
-    socket?.emit("join_room", roomId);
+  //joining an existing room
+  const joinRoom = async (name, email, inviteCode, roomType) => {
+    try {
+      const res = await fetch(`${SERVER_URL}/${roomType}/join/room`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, invite_code: inviteCode }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setRoomId(data.room_id);
+        socket?.emit("join_room", { invite_code: inviteCode, name });
+      }
+    } catch (error) {
+      console.error("Error joining room:", error);
+    }
   };
 
-  const leaveRoom = (roomId) => {
-    socket?.emit("leave_room", roomId);
+  // Submit Prediction (Refinement rooms)
+  const submitPrediction = async (role, prediction) => {
+    if (!roomId) return console.error("No room ID set");
+
+    try {
+      const res = await fetch(`${SERVER_URL}/refinement/prediction/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: roomId, role, prediction }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        socket?.emit("submit_prediction", { room_id: roomId, role, prediction });
+      }
+    } catch (error) {
+      console.error("Error submitting prediction:", error);
+    }
   };
 
-  //Retro Board
-  const sendComment = (roomId, comment) => {
-    socket?.emit("add_comment", { roomId, comment });
+  // Get Final Predictions
+  const getPredictions = async () => {
+    if (!roomId) return console.error("No room ID set");
+
+    try {
+      const res = await fetch(`${SERVER_URL}/refinement/get/predictions?room_id=${roomId}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setPredictions(data.predictions);
+      }
+    } catch (error) {
+      console.error("Error fetching predictions:", error);
+    }
   };
 
-  const sendAction = (roomId, userName, description) => {
-    socket?.emit("create_action", { roomId, userName, description });
+  // Add Comment (Retro board)
+  const addComment = async (comment) => {
+    if (!roomId) return console.error("No room ID set");
+
+    try {
+      await fetch(`${SERVER_URL}/retro/new/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: roomId, comment }),
+      });
+
+      socket?.emit("new_comment", comment);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
   };
 
-  //Refinement Board
-  const sendPrediction = (roomId, role, name, prediction) => {
-    socket?.emit("submit_prediction", { roomId, role, name, prediction });
+  // Create an Action Item (Retro board)
+  const createAction = async (userName, description) => {
+    if (!roomId) return console.error("No room ID set");
+
+    try {
+      await fetch(`${SERVER_URL}/retro/create/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: roomId, user_name: userName, description }),
+      });
+
+      socket?.emit("create_action", { room_id: roomId, user_name: userName, description });
+    } catch (error) {
+      console.error("Error creating action item:", error);
+    }
   };
 
   return (
     <SocketContext.Provider
       value={{
         socket,
-        rooms,
-        comments,
+        createAndJoinRefinementRoom: (name, email) => createAndJoinRoom(name, email, "refinement"),
+        createAndJoinRetroRoom: (name, email) => createAndJoinRoom(name, email, "retro"),
+        joinRefinementRoom: (name, email, inviteCode) => joinRoom(name, email, inviteCode, "refinement"),
+        joinRetroRoom: (name, email, inviteCode) => joinRoom(name, email, inviteCode, "retro"),
+        submitPrediction,
+        getPredictions,
+        addComment,
+        createAction,
         predictions,
-        actions,
-        createRoom,
-        joinRoom,
-        leaveRoom,
-        sendComment,
-        sendPrediction,
-        sendAction,
-        socketError,
+        roomId,
       }}
     >
       {children}
