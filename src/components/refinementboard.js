@@ -1,123 +1,132 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import io from 'socket.io-client';
 
-const RefinementBoard = ({ socket }) => {
-  const [rooms, setRooms] = useState([]);
+const socket = io('http://localhost:3000');
+
+const RefinementBoard = () => {
+  const roles = ['Developer', 'QA', 'UI', 'UX', 'Production', 'Architect'];
+
+  const [role, setRole] = useState('');
+  const [prediction, setPrediction] = useState('');
+  const [predictionsList, setPredictionsList] = useState([]);
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [roomCreated, setRoomCreated] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
-  const [roomName, setRoomName] = useState('');
-  const [isPersistent, setIsPersistent] = useState(false);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    async function fetchRooms() {
-      try {
-        const response = await axios.get('http://localhost:3000/rooms');
-        setRooms(response.data.rooms);
-      } catch (err) {
-        console.error('Error fetching rooms:', err);
-      }
-    }
-    fetchRooms();
+    socket.on('newPrediction', (data) => {
+      setPredictionsList((prevPredictions) => [...prevPredictions, data]);
+    });
+
+    return () => {
+      socket.off('newPrediction');
+    };
   }, []);
 
-  const handleCreateRoom = async (e) => {
-    e.preventDefault();
+  const handleCreateRoom = async () => {
     try {
-      const response = await axios.post('http://localhost:3000/rooms', { roomName, isPersistent });
-      setRooms((prev) => [...prev, response.data.room]);
-      setRoomName('');
-      setIsPersistent(false);
-    } catch (err) {
-      setError('Failed to create room. Please try again.');
+      const response = await fetch('http://localhost:3000/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName: 'RefinementRoom' }),
+      });
+      if (!response.ok) throw new Error('Failed to create room.');
+      const result = await response.json();
+      setRoomCreated(true);
+      setIsInRoom(true);
+      setInviteCode(result.room.inviteCode);
+      setSuccess('Room created successfully.');
+      setError('');
+    } catch (error) {
+      setError(error.message);
+      setSuccess('');
     }
   };
 
   const handleJoinRoom = async () => {
-    if (!inviteCode.trim() || inviteCode.length !== 6) {
-      setError('Please enter a valid 6-character invite code.');
+    if (!inviteCode.trim()) {
+      setError('Please enter a valid invite code.');
       return;
     }
-
     try {
-      const response = await axios.post('http://localhost:3000/rooms/join', { inviteCode });
-      console.log('Joined Room:', response.data.room);
-    } catch (err) {
-      setError('Invalid invite code or failed to join the room.');
+      const response = await fetch('http://localhost:3000/api/rooms/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode }),
+      });
+      if (!response.ok) throw new Error('Invalid invite code or failed to join the room.');
+      setRoomCreated(true);
+      setIsInRoom(true);
+      setError('');
+      setSuccess('Joined room successfully.');
+    } catch (error) {
+      setError(error.message);
+      setSuccess('');
     }
+  };
+
+  const handleLeaveRoom = () => {
+    setIsInRoom(false);
+    setRoomCreated(false);
+    setRole('');
+    setPrediction('');
+    setPredictionsList([]);
+    setInviteCode('');
+    setError('');
+    setSuccess('');
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
-      <div className="flex space-x-4">
-        <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
-          <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
-          <ul className="space-y-2">
-            {rooms.length > 0 ? (
-              rooms.map((room) => (
-                <li
-                  key={room.room_id}
-                  className="flex justify-between items-center text-[#E0E0E0] border-b border-[#444] pb-2"
-                >
-                  <span>{room.name}</span>
-                  <button className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80">
-                    Join Room
-                  </button>
-                </li>
-              ))
-            ) : (
-              <p>No available rooms</p>
-            )}
-          </ul>
-        </div>
+      {isInRoom && (
+        <button onClick={handleLeaveRoom} className="bg-red-500 text-white px-4 py-2 rounded mb-4">
+          Leave Room
+        </button>
+      )}
 
-        <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
-          <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
-          <form onSubmit={handleCreateRoom}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Room Name</label>
-              <input
-                type="text"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                className="mt-1 p-2 w-full border rounded"
-                required
-              />
-            </div>
-            <div className="mt-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={isPersistent}
-                  onChange={(e) => setIsPersistent(e.target.checked)}
-                  className="mr-2"
-                />
-                Persistent
-              </label>
-            </div>
-            <div className="mt-6">
-              <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-                Create Room
-              </button>
-            </div>
-          </form>
-          <div className="mt-4">
+      {!isInRoom && !roomCreated && (
+        <div className="flex space-x-4">
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
+            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
+            <button onClick={handleCreateRoom} className="bg-[#03A9F4] text-white px-4 py-2 rounded">
+              Create Room
+            </button>
             <input
               type="text"
               placeholder="Enter invite code"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
-              className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
+              className="border border-[#03A9F4] rounded w-full px-4 py-2 bg-[#121212] text-[#E0E0E0] mt-2"
             />
-            <button
-              onClick={handleJoinRoom}
-              className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
-            >
+            <button onClick={handleJoinRoom} className="bg-[#4CAF50] text-white px-4 py-2 rounded mt-2">
               Join Room
             </button>
             {error && <p className="text-red-500 mt-2">{error}</p>}
+            {success && <p className="text-green-500 mt-2">{success}</p>}
           </div>
         </div>
-      </div>
+      )}
+
+      {isInRoom && role && (
+        <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
+          <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
+          <input
+            type="number"
+            value={prediction}
+            onChange={(e) => setPrediction(e.target.value)}
+            className="border border-[#FF4081] rounded w-full px-2 py-1 mt-2 bg-[#121212] text-[#E0E0E0]"
+            placeholder="Enter your predicted time"
+          />
+          <button
+            onClick={() => setPredictionsList([...predictionsList, { role, prediction }])}
+            className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
+          >
+            Submit Prediction
+          </button>
+        </div>
+      )}
     </div>
   );
 };
