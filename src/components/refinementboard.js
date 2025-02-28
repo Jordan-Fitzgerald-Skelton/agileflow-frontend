@@ -68,6 +68,7 @@ const RefinementBoard = () => {
   };
 
   const handleLeaveRoom = () => {
+    socket.emit('leaveRoom', { roomName: 'RefinementRoom' });
     setIsInRoom(false);
     setRoomCreated(false);
     setRole('');
@@ -79,49 +80,52 @@ const RefinementBoard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4">
+    <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4 relative">
       {isInRoom && (
-        <button onClick={handleLeaveRoom} className="bg-red-500 text-white px-4 py-2 rounded mb-4">
+        <button
+          onClick={handleLeaveRoom}
+          className="absolute top-4 left-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
           Leave Room
         </button>
       )}
-
       {!isInRoom && !roomCreated && (
         <div className="flex space-x-4">
-          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 mr-4 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Available Rooms</h2>
+          <div className="w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
+            <h2 className="text-2xl font-semibold text-[#03A9F4]">Refinement Board</h2>
             <button onClick={handleCreateRoom} className="bg-[#03A9F4] text-white px-4 py-2 rounded">
               Create Room
             </button>
-            <input
-              type="text"
-              placeholder="Enter invite code"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              className="border border-[#03A9F4] rounded w-full px-4 py-2 bg-[#121212] text-[#E0E0E0] mt-2"
-            />
-            <button onClick={handleJoinRoom} className="bg-[#4CAF50] text-white px-4 py-2 rounded mt-2">
-              Join Room
-            </button>
-            {error && <p className="text-red-500 mt-2">{error}</p>}
-            {success && <p className="text-green-500 mt-2">{success}</p>}
+            <div className="mt-4">
+              <input
+                type="text"
+                placeholder="Enter invite code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212]"
+              />
+              <button onClick={handleJoinRoom} className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded">
+                Join Room
+              </button>
+              {error && <p className="text-red-500 mt-2">{error}</p>}
+              {success && <p className="text-green-500 mt-2">{success}</p>}
+            </div>
           </div>
         </div>
       )}
-
       {isInRoom && role && (
         <div className="bg-[#1C1C1C] shadow-md rounded-lg p-6 max-w-md mx-auto mt-10">
-          <h2 className="text-2xl font-semibold mb-4 text-[#FF4081]">Make Your Prediction</h2>
+          <h2 className="text-2xl font-semibold text-[#FF4081]">Make Your Prediction</h2>
           <input
             type="number"
             value={prediction}
             onChange={(e) => setPrediction(e.target.value)}
-            className="border border-[#FF4081] rounded w-full px-2 py-1 mt-2 bg-[#121212] text-[#E0E0E0]"
+            className="border border-[#FF4081] rounded w-full px-2 py-1 mt-2"
             placeholder="Enter your predicted time"
           />
           <button
-            onClick={() => setPredictionsList([...predictionsList, { role, prediction }])}
-            className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded hover:bg-[#D81B60]"
+            onClick={() => socket.emit('submitPrediction', { roomName: 'RefinementRoom', role, prediction })}
+            className="mt-4 bg-[#FF4081] text-white px-4 py-2 rounded"
           >
             Submit Prediction
           </button>
