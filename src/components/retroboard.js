@@ -12,7 +12,7 @@ const RetroBoard = () => {
     roomId,
     error,
     loading,
-    leaveRoom, // Import the leaveRoom function from context
+    leaveRoom,
   } = useSocket();
 
   // Local state for room management
