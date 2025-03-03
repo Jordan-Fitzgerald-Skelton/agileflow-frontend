@@ -20,6 +20,8 @@ const RetroBoard = () => {
   const [localError, setLocalError] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
   const [roomCreated, setRoomCreated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
 
   // Controlled inputs for comment and action entries
   const [goWellInput, setGoWellInput] = useState('');
@@ -32,6 +34,7 @@ const RetroBoard = () => {
     await createAndJoinRetroRoom();
     setRoomCreated(true);
     setIsInRoom(true);
+    setIsAdmin(true);
   };
 
   const handleJoinRoom = async () => {
@@ -41,6 +44,7 @@ const RetroBoard = () => {
     }
     await joinRetroRoom(inviteCode);
     setIsInRoom(true);
+    setIsAdmin(false);
   };
 
   // Handle adding comments
@@ -103,6 +107,11 @@ const RetroBoard = () => {
           <p className="text-center text-sm mb-4">
             Room ID: {roomId}
           </p>
+          {isAdmin && roomId && (
+            <p className="text-center text-sm mb-4">
+              Invite Code: <span className="font-bold text-[#03A9F4]">{inviteCode}</span>
+              </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {/* What did go well */}
             <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
@@ -198,12 +207,15 @@ const RetroBoard = () => {
                   value={actionInput}
                   onChange={(e) => setActionInput(e.target.value)}
                   className="border border-[#9C27B0] rounded w-full px-2 py-1 text-[#E0E0E0] bg-[#121212]"
+                  disabled={!isAdmin}
                 />
                 <button
                   className="ml-2 bg-[#9C27B0] text-white px-4 py-1 rounded hover:bg-[#8E24AA]"
                   onClick={async () => {
-                    await createAction(actionInput);
-                    setActionInput('');
+                    if (isAdmin) {
+                      await createAction(actionInput);
+                      setActionInput('');
+                    }
                   }}
                 >
                   Add
