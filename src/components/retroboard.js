@@ -31,10 +31,13 @@ const RetroBoard = () => {
 
   // Handle room creation and joining
   const handleCreateRoom = async () => {
-    await createAndJoinRetroRoom();
-    setRoomCreated(true);
-    setIsInRoom(true);
-    setIsAdmin(true);
+    const roomInviteCode = await createAndJoinRetroRoom();
+    if (roomInviteCode) {
+      setInviteCode(roomInviteCode);
+      setRoomCreated(true);
+      setIsInRoom(true);
+      setIsAdmin(true);
+    }
   };
 
   const handleJoinRoom = async () => {
@@ -107,7 +110,7 @@ const RetroBoard = () => {
           <p className="text-center text-sm mb-4">
             Room ID: {roomId}
           </p>
-          {isAdmin && roomId && (
+          {isAdmin && roomId (
             <p className="text-center text-sm mb-4">
               Invite Code: <span className="font-bold text-[#03A9F4]">{inviteCode}</span>
               </p>

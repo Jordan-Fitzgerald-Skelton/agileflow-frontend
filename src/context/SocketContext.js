@@ -20,33 +20,35 @@ export const SocketProvider = ({ children }) => {
   // Initialize WebSocket
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    const newSocket = io(SERVER_URL, {
-      transports: ["websocket"],
-      reconnection: true, // Ensures auto-reconnect
-    });
-
-    newSocket.on("connect", () => console.log("Connected to WebSocket"));
-    newSocket.on("disconnect", () => console.log("Disconnected from WebSocket"));
-
-    newSocket.on("error", (err) => setError(err?.message || "Socket error"));
-
-    newSocket.on("prediction_submitted", (data) => 
-      setPredictions((prev) => [...prev, data])
-    );
-
-    newSocket.on("new_comment", (comment) => 
-      setComments((prev) => [...prev, comment])
-    );
-
-    newSocket.on("action_added", (action) => 
-      setActions((prev) => [...prev, action])
-    );
-
+  
+    const newSocket = io(SERVER_URL, { transports: ["websocket"], reconnection: true });
+  
+    const handleConnect = () => console.log("Connected to WebSocket");
+    const handleDisconnect = () => console.log("Disconnected from WebSocket");
+    const handleError = (err) => setError(err?.message || "Socket error");
+    const handlePredictionSubmitted = (data) => setPredictions((prev) => [...prev, data]);
+    const handleNewComment = (comment) => setComments((prev) => [...prev, comment]);
+    const handleActionAdded = (action) => setActions((prev) => [...prev, action]);
+  
+    newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("error", handleError);
+    newSocket.on("prediction_submitted", handlePredictionSubmitted);
+    newSocket.on("new_comment", handleNewComment);
+    newSocket.on("action_added", handleActionAdded);
+  
     setSocket(newSocket);
-
-    return () => newSocket.disconnect();
-  }, [isAuthenticated]);
+  
+    return () => {
+      newSocket.off("connect", handleConnect);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.off("error", handleError);
+      newSocket.off("prediction_submitted", handlePredictionSubmitted);
+      newSocket.off("new_comment", handleNewComment);
+      newSocket.off("action_added", handleActionAdded);
+      newSocket.disconnect();
+    };
+  }, [isAuthenticated]);  
 
   // =================== Helper for API Calls ===================
   const request = async (url, method, body = null) => {
@@ -83,18 +85,16 @@ export const SocketProvider = ({ children }) => {
 
   const joinRefinementRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
-
     const data = await request(`/refinement/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code: inviteCode,
     });
-
     if (data) {
       setRoomId(data.room_id);
-      socket?.emit("join_room", { invite_code: inviteCode, name: user.name, email: user.email });
+      socket?.emit("join_room", { room_id: data.room_id, invite_code: inviteCode, name: user.name, email: user.email });
     }
-  };
+  };  
 
   // Create and Join Retro Room
   const createAndJoinRetroRoom = async () => {
@@ -109,29 +109,25 @@ export const SocketProvider = ({ children }) => {
 
   const joinRetroRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
-
     const data = await request(`/retro/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code: inviteCode,
     });
-
     if (data) {
       setRoomId(data.room_id);
-      socket?.emit("join_room", { invite_code: inviteCode, name: user.name, email: user.email });
+      socket?.emit("join_room", { room_id: data.room_id, invite_code: inviteCode, name: user.name, email: user.email });
     }
-  };
+  };  
 
   // =================== Refinement ===================
   const submitPrediction = async (role, prediction) => {
-    if (!roomId) return setError("No room ID set");
-
+    if (!roomId) return setError("No room ID set");  
     const data = await request("/refinement/prediction/submit", "POST", { room_id: roomId, role, prediction });
-
     if (data) {
       socket?.emit("submit_prediction", { room_id: roomId, role, prediction });
     }
-  };
+  };  
 
   const getPredictions = async () => {
     if (!roomId) return setError("No room ID set");
@@ -143,23 +139,28 @@ export const SocketProvider = ({ children }) => {
   // =================== Retro ===================
   const addComment = async (comment) => {
     if (!roomId) return setError("No room ID set");
-
-    await request("/retro/new/comment", "POST", { room_id: roomId, comment });
-    socket?.emit("new_comment", comment);
+    const data = await request("/retro/new/comment", "POST", { room_id: roomId, comment });
+    if (data) {
+      socket?.emit("new_comment", comment);
+    }
   };
-
+  
   const createAction = async (description) => {
     if (!roomId) return setError("No room ID set");
-
-    await request("/retro/create/action", "POST", { room_id: roomId, user_name: user.name, description });
-    socket?.emit("create_action", { room_id: roomId, user_name: user.name, description });
+    const data = await request("/retro/create/action", "POST", { room_id: roomId, user_name: user.name, description });
+    if (data) {
+      socket?.emit("create_action", { room_id: roomId, user_name: user.name, description });
+    }
   };
 
   const leaveRoom = () => {
     if (!roomId) return;
-    socket?.emit("leave_room", { roomId });
+    socket?.emit("leave_room", { room_id: roomId });
     setRoomId(null);
-  };
+    setPredictions([]);
+    setComments([]);
+    setActions([]);
+  };  
 
   // =================== Memoized Context ===================
   const contextValue = useMemo(() => ({
@@ -179,7 +180,7 @@ export const SocketProvider = ({ children }) => {
     roomId,
     error,
     loading,
-  }), [socket, roomId, error, loading]); // Only important dependencies
+  }), [socket, roomId]);  
 
   return (
     <SocketContext.Provider value={contextValue}>
