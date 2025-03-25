@@ -20,7 +20,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const newSocket = io("http://localhost:5000", { transports: ["websocket"], reconnection: true });
+    const newSocket = io(process.env.BACK_APP, { transports: ["websocket"], reconnection: true });
 
     const handleConnect = () => console.log("Connected to WebSocket");
     const handleDisconnect = () => console.log("Disconnected from WebSocket");
@@ -56,7 +56,7 @@ export const SocketProvider = ({ children }) => {
   const request = async (url, method, body = null) => {
     setLoading(true);
     try {
-      const res = await fetch(`${"http://localhost:5000"}${url}`, {
+      const res = await fetch(`${process.env.BACK_APP}${url}`, {
         method,
         headers: { "Content-Type": "application/json" },
         body: body ? JSON.stringify(body) : null,
@@ -77,13 +77,36 @@ export const SocketProvider = ({ children }) => {
   // Create and Join Refinement Room
   const createAndJoinRefinementRoom = async () => {
     if (!user) return setError("User not authenticated");
-
-    const data = await request(`/refinement/create/room`, "POST");
-    if (data) {
-      setRoomId(data.room_id);
-      await joinRefinementRoom(data.invite_code);
+  
+    try {
+      const data = await request(`/refinement/create/room`, "POST");
+      if (data) {
+        // Set room ID and invite code
+        setRoomId(data.room_id);
+        
+        // Emit room creation event
+        socket?.emit("join_room", { 
+          invite_code: data.invite_code, 
+          name: user.name, 
+          email: user.email 
+        });
+  
+        // Return invite code for UI to use
+        return data.invite_code;
+      }
+      return null;
+    } catch (error) {
+      setError(error.message || "Failed to create room");
+      return null;
     }
   };
+
+  /*
+  if (data) {
+    setRoomId(data.room_id);
+    await joinRefinementRoom(data.invite_code);
+  }
+  */
 
   const joinRefinementRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
@@ -103,13 +126,36 @@ export const SocketProvider = ({ children }) => {
   // Create and Join Retro Room
   const createAndJoinRetroRoom = async () => {
     if (!user) return setError("User not authenticated");
-
-    const data = await request(`/retro/create/room`, "POST");
-    if (data) {
-      setRoomId(data.room_id);
-      await joinRetroRoom(data.invite_code);
+  
+    try {
+      const data = await request(`/retro/create/room`, "POST");
+      if (data) {
+        // Set room ID and invite code
+        setRoomId(data.room_id);
+        
+        // Emit room creation event
+        socket?.emit("join_room", { 
+          invite_code: data.invite_code, 
+          name: user.name, 
+          email: user.email 
+        });
+  
+        // Return invite code for UI to use
+        return data.invite_code;
+      }
+      return null;
+    } catch (error) {
+      setError(error.message || "Failed to create room");
+      return null;
     }
   };
+
+  /*
+  if (data) {
+    setRoomId(data.room_id);
+    await joinRetroRoom(data.invite_code);
+  }
+  */
 
   const joinRetroRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
