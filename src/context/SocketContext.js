@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 import { io } from "socket.io-client";
 import { useAuth0 } from "@auth0/auth0-react";
 
-const SERVER_URL = "http://localhost:5000";
 const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
@@ -20,25 +19,27 @@ export const SocketProvider = ({ children }) => {
   // Initialize WebSocket
   useEffect(() => {
     if (!isAuthenticated) return;
-  
-    const newSocket = io(SERVER_URL, { transports: ["websocket"], reconnection: true });
-  
+
+    const newSocket = io("http://localhost:5000", { transports: ["websocket"], reconnection: true });
+
     const handleConnect = () => console.log("Connected to WebSocket");
     const handleDisconnect = () => console.log("Disconnected from WebSocket");
     const handleError = (err) => setError(err?.message || "Socket error");
     const handlePredictionSubmitted = (data) => setPredictions((prev) => [...prev, data]);
     const handleNewComment = (comment) => setComments((prev) => [...prev, comment]);
     const handleActionAdded = (action) => setActions((prev) => [...prev, action]);
-  
+    const handleUserListUpdate = (userList) => console.log("User List Updated:", userList);
+
     newSocket.on("connect", handleConnect);
     newSocket.on("disconnect", handleDisconnect);
     newSocket.on("error", handleError);
     newSocket.on("prediction_submitted", handlePredictionSubmitted);
     newSocket.on("new_comment", handleNewComment);
     newSocket.on("action_added", handleActionAdded);
-  
+    newSocket.on("user_list", handleUserListUpdate);
+
     setSocket(newSocket);
-  
+
     return () => {
       newSocket.off("connect", handleConnect);
       newSocket.off("disconnect", handleDisconnect);
@@ -46,15 +47,16 @@ export const SocketProvider = ({ children }) => {
       newSocket.off("prediction_submitted", handlePredictionSubmitted);
       newSocket.off("new_comment", handleNewComment);
       newSocket.off("action_added", handleActionAdded);
+      newSocket.off("user_list", handleUserListUpdate);
       newSocket.disconnect();
     };
-  }, [isAuthenticated]);  
+  }, [isAuthenticated]);
 
   // =================== Helper for API Calls ===================
   const request = async (url, method, body = null) => {
     setLoading(true);
     try {
-      const res = await fetch(`${SERVER_URL}${url}`, {
+      const res = await fetch(`${"http://localhost:5000"}${url}`, {
         method,
         headers: { "Content-Type": "application/json" },
         body: body ? JSON.stringify(body) : null,
@@ -85,16 +87,18 @@ export const SocketProvider = ({ children }) => {
 
   const joinRefinementRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
+
     const data = await request(`/refinement/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code: inviteCode,
     });
+
     if (data) {
       setRoomId(data.room_id);
       socket?.emit("join_room", { room_id: data.room_id, invite_code: inviteCode, name: user.name, email: user.email });
     }
-  };  
+  };
 
   // Create and Join Retro Room
   const createAndJoinRetroRoom = async () => {
@@ -109,25 +113,28 @@ export const SocketProvider = ({ children }) => {
 
   const joinRetroRoom = async (inviteCode) => {
     if (!user) return setError("User not authenticated");
+
     const data = await request(`/retro/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code: inviteCode,
     });
+
     if (data) {
       setRoomId(data.room_id);
       socket?.emit("join_room", { room_id: data.room_id, invite_code: inviteCode, name: user.name, email: user.email });
     }
-  };  
+  };
 
   // =================== Refinement ===================
   const submitPrediction = async (role, prediction) => {
-    if (!roomId) return setError("No room ID set");  
+    if (!roomId) return setError("No room ID set");
+
     const data = await request("/refinement/prediction/submit", "POST", { room_id: roomId, role, prediction });
     if (data) {
       socket?.emit("submit_prediction", { room_id: roomId, role, prediction });
     }
-  };  
+  };
 
   const getPredictions = async () => {
     if (!roomId) return setError("No room ID set");
@@ -139,14 +146,16 @@ export const SocketProvider = ({ children }) => {
   // =================== Retro ===================
   const addComment = async (comment) => {
     if (!roomId) return setError("No room ID set");
+
     const data = await request("/retro/new/comment", "POST", { room_id: roomId, comment });
     if (data) {
       socket?.emit("new_comment", comment);
     }
   };
-  
+
   const createAction = async (description) => {
     if (!roomId) return setError("No room ID set");
+
     const data = await request("/retro/create/action", "POST", { room_id: roomId, user_name: user.name, description });
     if (data) {
       socket?.emit("create_action", { room_id: roomId, user_name: user.name, description });
@@ -160,7 +169,7 @@ export const SocketProvider = ({ children }) => {
     setPredictions([]);
     setComments([]);
     setActions([]);
-  };  
+  };
 
   // =================== Memoized Context ===================
   const contextValue = useMemo(() => ({
@@ -180,7 +189,7 @@ export const SocketProvider = ({ children }) => {
     roomId,
     error,
     loading,
-  }), [socket, roomId]);  
+  }), [socket, roomId]);
 
   return (
     <SocketContext.Provider value={contextValue}>

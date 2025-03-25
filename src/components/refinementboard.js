@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3000');
+const socket = io('http://localhost:4000');
 
 const RefinementBoard = () => {
   const roles = ['Developer', 'QA', 'UI', 'UX', 'Production', 'Architect'];
@@ -27,7 +27,7 @@ const RefinementBoard = () => {
 
   const handleCreateRoom = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/rooms', {
+      const response = await fetch('http://localhost:4000/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomName: 'RefinementRoom' }),
@@ -51,7 +51,7 @@ const RefinementBoard = () => {
       return;
     }
     try {
-      const response = await fetch('http://localhost:3000/api/rooms/join', {
+      const response = await fetch('http://localhost:4000/api/rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inviteCode }),
