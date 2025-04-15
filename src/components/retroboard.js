@@ -5,21 +5,23 @@ const RetroBoard = () => {
   const {
     createAndJoinRetroRoom,
     joinRetroRoom,
+    addComment,
     createAction,
     comments,
     actions,
     roomId,
+    inviteCode: contextInviteCode,
     error,
     loading,
     leaveRoom,
     socket,
+    subscribe,
   } = useSocket();
 
   // Local state for room management
-  const [inviteCode, setInviteCode] = useState('');
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [localError, setLocalError] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
-  const [roomCreated, setRoomCreated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Controlled inputs for comment and action entries
@@ -28,13 +30,18 @@ const RetroBoard = () => {
   const [improvementInput, setImprovementInput] = useState('');
   const [actionInput, setActionInput] = useState('');
 
-  // Handle room creation and joining
+  // Categorized comments
+  const [goWellComments, setGoWellComments] = useState([]);
+  const [didntGoWellComments, setDidntGoWellComments] = useState([]);
+  const [improvementComments, setImprovementComments] = useState([]);
+  const [retroActions, setRetroActions] = useState([]);
+
+  // Handle room creation
   const handleCreateRoom = async () => {
     try {
-      const roomInviteCode = await createAndJoinRetroRoom();
-      if (roomInviteCode) {
-        setInviteCode(roomInviteCode);
-        setRoomCreated(true);
+      setLocalError('');
+      const result = await createAndJoinRetroRoom();
+      if (result) {
         setIsInRoom(true);
         setIsAdmin(true);
       }
@@ -43,252 +50,336 @@ const RetroBoard = () => {
     }
   };
 
+  // Handle joining room
   const handleJoinRoom = async () => {
-    if (inviteCode.trim() === '') {
+    if (!inviteCodeInput.trim()) {
       setLocalError('Please enter a valid invite code.');
       return;
     }
+    
     try {
-      const success = await joinRetroRoom(inviteCode);
-      if (success) {
+      setLocalError('');
+      const result = await joinRetroRoom(inviteCodeInput);
+      if (result) {
         setIsInRoom(true);
         setIsAdmin(false);
       } else {
-        setLocalError('Failed to join the room. Please try again.');
+        setLocalError('Failed to join the room. Please check your invite code.');
       }
     } catch (err) {
       setLocalError('Failed to join the room. Please try again.');
     }
   };
 
-  const handleAddComment = async (category, text) => {
-    if (!text.trim()) return;
+  // Handle adding comments
+  const handleAddComment = async (category, comment) => {
+    if (!comment.trim()) return;
+    
     try {
-      await socket.emit('add_comment', { category, text, roomId });
+      const commentText = `${category}: ${comment}`;
+      await addComment(commentText);
+      
+      // Clear input after sending
+      switch (category) {
+        case 'WhatWentWell':
+          setGoWellInput('');
+          break;
+        case 'WhatDidntGoWell':
+          setDidntGoWellInput('');
+          break;
+        case 'AreasForImprovement':
+          setImprovementInput('');
+          break;
+        default:
+          break;
+      }
     } catch (err) {
       console.error('Error adding comment:', err);
+      setLocalError('Failed to add comment. Please try again.');
     }
   };
 
-  // Handle adding comments
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewComment = (newComment) => {
-      // Only update the comments array if it's from the correct room
-      if (newComment.roomId === roomId) {
-        // Add the new comment to the correct category
-        switch (newComment.category) {
-          case 'goWell':
-            goWellComments.push(newComment);
-            break;
-          case 'didntGoWell':
-            didntGoWellComments.push(newComment);
-            break;
-          case 'areasForImprovement':
-            improvementComments.push(newComment);
-            break;
-          default:
-            break;
-        }
-      }
-    };
-
-    socket.on('new_comment', handleNewComment);
-    return () => {
-      socket.off('new_comment', handleNewComment);
-    };
-  }, [socket, roomId, comments]);
+  // Handle creating an action item (admin only)
+  const handleCreateAction = async () => {
+    if (!actionInput.trim() || !isAdmin) return;
+    
+    try {
+      await createAction(actionInput);
+      setActionInput('');
+    } catch (err) {
+      console.error('Error creating action:', err);
+      setLocalError('Failed to create action. Please try again.');
+    }
+  };
 
   // Room cleanup when leaving
-  const handleLeaveRoom = async () => {
-    try {
-      await leaveRoom();
-      setIsInRoom(false);
-      setRoomCreated(false);
-      setInviteCode('');
-      setIsAdmin(false);
-    } catch (err) {
-      setLocalError('Error leaving room. Please try again.');
-    }
+  const handleLeaveRoom = () => {
+    leaveRoom();
+    setIsInRoom(false);
+    setIsAdmin(false);
+    setInviteCodeInput('');
+    setGoWellComments([]);
+    setDidntGoWellComments([]);
+    setImprovementComments([]);
+    setRetroActions([]);
   };
 
-  // Filter global comments by category
-  const goWellComments = comments.filter(c => c.category === 'goWell');
-  const didntGoWellComments = comments.filter(c => c.category === 'didntGoWell');
-  const improvementComments = comments.filter(c => c.category === 'areasForImprovement');
+  // Process comments when they change
+  useEffect(() => {
+    // Process and categorize all comments
+    const wellComments = [];
+    const didntWellComments = [];
+    const improvementComments = [];
+    
+    comments.forEach(comment => {
+      if (typeof comment === 'string') {
+        if (comment.startsWith('WhatWentWell:')) {
+          wellComments.push(comment.substring('WhatWentWell:'.length).trim());
+        } else if (comment.startsWith('WhatDidntGoWell:')) {
+          didntWellComments.push(comment.substring('WhatDidntGoWell:'.length).trim());
+        } else if (comment.startsWith('AreasForImprovement:')) {
+          improvementComments.push(comment.substring('AreasForImprovement:'.length).trim());
+        }
+      }
+    });
+    
+    setGoWellComments(wellComments);
+    setDidntGoWellComments(didntWellComments);
+    setImprovementComments(improvementComments);
+  }, [comments]);
+
+  // Process actions when they change
+  useEffect(() => {
+    setRetroActions(actions);
+  }, [actions]);
+
+  // Subscribe to new_comment and action_added events
+  useEffect(() => {
+    if (!socket || !isInRoom) return;
+    
+    const newCommentUnsubscribe = subscribe('new_comment', (newComment) => {
+      console.log('New comment received via subscription:', newComment);
+    });
+    
+    const actionAddedUnsubscribe = subscribe('action_added', (newAction) => {
+      console.log('New action received via subscription:', newAction);
+    });
+    
+    return () => {
+      newCommentUnsubscribe();
+      actionAddedUnsubscribe();
+    };
+  }, [socket, isInRoom, subscribe]);
 
   return (
-    <div className="min-h-screen bg-[#121212] text-[#E0E0E0] p-4 relative">
-      {/* Leave Room Button */}
-      {(isInRoom || roomCreated) && (
-        <div className="absolute top-4 left-4">
+    <div className="min-h-screen bg-gray-900 text-gray-200 p-4 relative">
+      {/* Header and Leave Room Button */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-blue-400">Retro Board</h1>
+        {isInRoom && (
           <button
             onClick={handleLeaveRoom}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:opacity-80"
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
           >
             Leave Room
           </button>
-        </div>
-      )}
+        )}
+      </div>
       
-      {!(isInRoom || roomCreated) ? (
-        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-          <div className="w-full sm:w-1/2 bg-[#1C1C1C] shadow-lg rounded-lg p-6 space-y-4">
-            <h2 className="text-2xl font-semibold mb-4 text-[#03A9F4]">Retro Board</h2>
-            <button
-              onClick={handleCreateRoom}
-              className="bg-[#03A9F4] text-white px-4 py-2 rounded hover:opacity-80"
-            >
-              Create Room
-            </button>
-            <div className="mt-4">
-              <input
-                type="text"
-                placeholder="Enter invite code"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="border border-[#03A9F4] rounded w-full px-4 py-2 text-[#E0E0E0] bg-[#121212] placeholder-[#E0E0E0] focus:ring-2 focus:ring-[#03A9F4] focus:outline-none"
-              />
+      {!isInRoom ? (
+        <div className="max-w-lg mx-auto bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Create a new Retro Room</h2>
               <button
-                onClick={handleJoinRoom}
-                className="mt-2 bg-[#4CAF50] text-white px-4 py-2 rounded hover:opacity-80"
+                onClick={handleCreateRoom}
+                className="w-full bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 transition-colors"
+                disabled={loading}
               >
-                Join Room
+                {loading ? 'Creating...' : 'Create Room'}
               </button>
-              {(localError || error) && (
-                <p className="text-red-500 mt-2">{localError || error}</p>
-              )}
             </div>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-800 text-gray-400">OR</span>
+              </div>
+            </div>
+            
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Join an existing Retro Room</h2>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Enter invite code"
+                  value={inviteCodeInput}
+                  onChange={(e) => setInviteCodeInput(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  onClick={handleJoinRoom}
+                  className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Joining...' : 'Join Room'}
+                </button>
+              </div>
+            </div>
+            
+            {(localError || error) && (
+              <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-red-200">
+                {localError || error}
+              </div>
+            )}
           </div>
         </div>
       ) : (
-        <div className="mt-6">
-          <p className="text-center text-sm mb-4">Room ID: {roomId}</p>
-          {isAdmin && roomId && (
-            <p className="text-center text-sm mb-4">
-              Invite Code: <span className="font-bold text-[#03A9F4]">{inviteCode}</span>
+        <div className="container mx-auto">
+          {/* Room info */}
+          <div className="mb-6 text-center">
+            <p className="text-sm text-gray-400">
+              Room ID: <span className="font-mono">{roomId}</span>
             </p>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {/* What did go well */}
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2 text-[#39D353]">What did go well</h3>
-              <div className="flex">
+            {isAdmin && contextInviteCode && (
+              <p className="text-sm text-gray-400 mt-1">
+                Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
+              </p>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {/* What went well */}
+            <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+              <h3 className="text-xl font-semibold mb-4 text-green-400 border-b border-gray-700 pb-2">
+                What Went Well
+              </h3>
+              <div className="flex space-x-2 mb-4">
                 <input
                   type="text"
                   placeholder="Add comment"
                   value={goWellInput}
                   onChange={(e) => setGoWellInput(e.target.value)}
-                  className="border border-[#39D353] rounded w-full px-2 py-1 text-[#E0E0E0] bg-[#121212]"
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
                 />
                 <button
-                  className="ml-2 bg-[#39D353] text-white px-4 py-1 rounded hover:bg-[#2D9F41]"
-                  onClick={async () => {
-                    await handleAddComment('goWell', goWellInput);
-                    setGoWellInput('');
-                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  onClick={() => handleAddComment('WhatWentWell', goWellInput)}
+                  disabled={loading}
                 >
                   Add
                 </button>
               </div>
-              <ul className="mt-4">
+              <ul className="space-y-2">
                 {goWellComments.map((comment, index) => (
-                  <li key={index} className="text-[#E0E0E0] mb-1">{comment.text}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
                 ))}
               </ul>
             </div>
 
             {/* What didn't go well */}
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2 text-[#FF4081]">What didn't go well</h3>
-              <div className="flex">
+            <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+              <h3 className="text-xl font-semibold mb-4 text-red-400 border-b border-gray-700 pb-2">
+                What Didn't Go Well
+              </h3>
+              <div className="flex space-x-2 mb-4">
                 <input
                   type="text"
                   placeholder="Add comment"
                   value={didntGoWellInput}
                   onChange={(e) => setDidntGoWellInput(e.target.value)}
-                  className="border border-[#FF4081] rounded w-full px-2 py-1 text-[#E0E0E0] bg-[#121212]"
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
                 />
                 <button
-                  className="ml-2 bg-[#FF4081] text-white px-4 py-1 rounded hover:bg-[#D81B60]"
-                  onClick={async () => {
-                    await handleAddComment('didntGoWell', didntGoWellInput);
-                    setDidntGoWellInput('');
-                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                  onClick={() => handleAddComment('WhatDidntGoWell', didntGoWellInput)}
+                  disabled={loading}
                 >
                   Add
                 </button>
               </div>
-              <ul className="mt-4">
+              <ul className="space-y-2">
                 {didntGoWellComments.map((comment, index) => (
-                  <li key={index} className="text-[#E0E0E0] mb-1">{comment.text}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
                 ))}
               </ul>
             </div>
 
-
             {/* Areas for improvement */}
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2 text-[#03A9F4]">Areas for improvement</h3>
-              <div className="flex">
+            <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+              <h3 className="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
+                Areas for Improvement
+              </h3>
+              <div className="flex space-x-2 mb-4">
                 <input
                   type="text"
                   placeholder="Add comment"
                   value={improvementInput}
                   onChange={(e) => setImprovementInput(e.target.value)}
-                  className="border border-[#03A9F4] rounded w-full px-2 py-1 text-[#E0E0E0] bg-[#121212]"
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
                 />
                 <button
-                  className="ml-2 bg-[#03A9F4] text-white px-4 py-1 rounded hover:bg-[#0288D1]"
-                  onClick={async () => {
-                    await handleAddComment('areasForImprovement', improvementInput);
-                    setImprovementInput('');
-                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  onClick={() => handleAddComment('AreasForImprovement', improvementInput)}
+                  disabled={loading}
                 >
                   Add
                 </button>
               </div>
-              <ul className="mt-4">
+              <ul className="space-y-2">
                 {improvementComments.map((comment, index) => (
-                  <li key={index} className="text-[#E0E0E0] mb-1">{comment.text}</li>
-                ))}
-              </ul>
-            </div>
-
-
-            {/* Actions */}
-            <div className="bg-[#1C1C1C] shadow-md rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2 text-[#9C27B0]">Actions</h3>
-              <div className="flex">
-                <input
-                  type="text"
-                  placeholder="Add action"
-                  value={actionInput}
-                  onChange={(e) => setActionInput(e.target.value)}
-                  className="border border-[#9C27B0] rounded w-full px-2 py-1 text-[#E0E0E0] bg-[#121212]"
-                />
-                <button
-                  className="ml-2 bg-[#9C27B0] text-white px-4 py-1 rounded hover:bg-[#8E24AA]"
-                  onClick={async () => {
-                    await createAction(actionInput);
-                    setActionInput('');
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-              <ul className="mt-4">
-                {actions.map((action, index) => (
-                  <li key={index} className="text-[#E0E0E0] mb-1">{action.description}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
                 ))}
               </ul>
             </div>
           </div>
+          
+          {/* Actions section */}
+          <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+            <h3 className="text-xl font-semibold mb-4 text-purple-400 border-b border-gray-700 pb-2">
+              Action Items
+            </h3>
+            {isAdmin && (
+              <div className="flex space-x-2 mb-4">
+                <input
+                  type="text"
+                  placeholder="Add action item"
+                  value={actionInput}
+                  onChange={(e) => setActionInput(e.target.value)}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                />
+                <button
+                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                  onClick={handleCreateAction}
+                  disabled={loading}
+                >
+                  Add Action
+                </button>
+              </div>
+            )}
+            <ul className="space-y-2">
+              {retroActions.map((action, index) => (
+                <li key={index} className="bg-gray-700 p-3 rounded-md flex items-center">
+                  <div className="mr-2 text-purple-400">•</div>
+                  <div>
+                    <p>{action.description}</p>
+                    <p className="text-xs text-gray-400 mt-1">Assigned to: {action.user_name}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
+      
       {loading && (
-        <p className="text-center mt-4">Loading...</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-4 rounded-lg">
+            <p className="text-white">Loading...</p>
+          </div>
+        </div>
       )}
     </div>
   );
