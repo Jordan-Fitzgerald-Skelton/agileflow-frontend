@@ -295,7 +295,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     if (data && socket && isConnected) {
-      socket.emit("new_comment", comment);
+      socket.emit("new_comment", { room_id: roomId, comment });
       return data;
     }
     return null;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
+import './retroboard.css';
 
 const RetroBoard = () => {
   const {
