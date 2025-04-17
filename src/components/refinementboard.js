@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSocket } from '../../context/SocketContext';
+import { useSocket } from '../context/SocketContext';
 import { FaClipboard, FaSignOutAlt, FaUser, FaCrown, FaChartBar, FaRedo, FaTrophy } from 'react-icons/fa';
 import './refinementboard.css';
 
