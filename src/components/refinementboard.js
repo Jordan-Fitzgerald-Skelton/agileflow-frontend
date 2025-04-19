@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { FaClipboard, FaSignOutAlt, FaUser, FaCrown, FaChartBar, FaRedo, FaTrophy } from 'react-icons/fa';
 import './refinementboard.css';
 
 const RefinementBoard = () => {
-  const navigate = useNavigate();
   const {
     isConnected,
     roomId,
@@ -107,23 +105,62 @@ const RefinementBoard = () => {
 
   const roles = ['UI', 'DEV', 'PRODUCT', 'ARCH', 'UX', 'QA'];
 
-  if (!roomId) {
-    return (
-      <div className="join-create">
-        <h2>Join or Create a Room</h2>
-        <input
-          type="text"
-          placeholder="Enter Invite Code"
-          value={joinCode}
-          onChange={(e) => setJoinCode(e.target.value)}
-        />
-        <button onClick={handleJoinRoom} disabled={loading}>Join Room</button>
-        <button onClick={handleCreateRoom} disabled={loading}>Create Room</button>
-        {error && <div className="error">{error}</div>}
+  {!isInRoom && (
+    <div className="max-w-lg mx-auto bg-[#1C1C1C] rounded-lg shadow-lg p-6">
+      <div className="space-y-6">
+        {/* Create Room */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Create a new Refinement Room</h2>
+          <button
+            onClick={handleCreateRoom}
+            className="w-full bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 transition-colors"
+            disabled={loading}
+          >
+            {loading ? 'Creating...' : 'Create Room'}
+          </button>
+        </div>
+  
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-600"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-800 text-gray-400">OR</span>
+          </div>
+        </div>
+  
+        {/* Join Room */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Join an existing Refinement Room</h2>
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Enter invite code"
+              value={inviteCodeInput}
+              onChange={(e) => setInviteCodeInput(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <button
+              onClick={handleJoinRoom}
+              className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors"
+              disabled={loading}
+            >
+              {loading ? 'Joining...' : 'Join Room'}
+            </button>
+          </div>
+        </div>
+  
+        {/* Error Message */}
+        {(localError || error) && (
+          <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-red-200">
+            {localError || error}
+          </div>
+        )}
       </div>
-    );
-  }
-
+    </div>
+  )}
+  
   return (
     <div className="refinement-board">
       {/* Header */}

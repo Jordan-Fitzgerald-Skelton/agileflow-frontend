@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
-import './retroboard.css';
 
 const RetroBoard = () => {
   const {
@@ -173,7 +172,7 @@ const RetroBoard = () => {
   }, [socket, isInRoom, subscribe]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 p-4 relative">
+    <div className="min-h-screen bg-[#121212] text-gray-200 p-4 relative">
       {/* Header and Leave Room Button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-blue-400">Retro Board</h1>
@@ -188,7 +187,7 @@ const RetroBoard = () => {
       </div>
       
       {!isInRoom ? (
-        <div className="max-w-lg mx-auto bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="max-w-lg mx-auto bg-[#1C1C1C] rounded-lg shadow-lg p-6">
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-semibold mb-4">Create a new Retro Room</h2>
