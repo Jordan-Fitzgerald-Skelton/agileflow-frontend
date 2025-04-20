@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
+import { FaClipboard, FaUser, FaCrown } from 'react-icons/fa';
 
 const RetroBoard = () => {
   const {
@@ -14,8 +15,7 @@ const RetroBoard = () => {
     error,
     loading,
     leaveRoom,
-    socket,
-    subscribe,
+    userList,
   } = useSocket();
 
   // Local state for room management
@@ -23,6 +23,7 @@ const RetroBoard = () => {
   const [localError, setLocalError] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Controlled inputs for comment and action entries
   const [goWellInput, setGoWellInput] = useState('');
@@ -69,6 +70,13 @@ const RetroBoard = () => {
     } catch (err) {
       setLocalError('Failed to join the room. Please try again.');
     }
+  };
+
+  const handleCopyInviteCode = () => {
+    if (!contextInviteCode) return;
+    navigator.clipboard.writeText(contextInviteCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // Handle adding comments
@@ -153,24 +161,6 @@ const RetroBoard = () => {
     setRetroActions(actions);
   }, [actions]);
 
-  // Subscribe to new_comment and action_added events
-  useEffect(() => {
-    if (!socket || !isInRoom) return;
-    
-    const newCommentUnsubscribe = subscribe('new_comment', (newComment) => {
-      console.log('New comment received via subscription:', newComment);
-    });
-    
-    const actionAddedUnsubscribe = subscribe('action_added', (newAction) => {
-      console.log('New action received via subscription:', newAction);
-    });
-    
-    return () => {
-      newCommentUnsubscribe();
-      actionAddedUnsubscribe();
-    };
-  }, [socket, isInRoom, subscribe]);
-
   return (
     <div className="min-h-screen bg-[#121212] text-gray-200 p-4 relative">
       {/* Header and Leave Room Button */}
@@ -244,10 +234,34 @@ const RetroBoard = () => {
               Room ID: <span className="font-mono">{roomId}</span>
             </p>
             {isAdmin && contextInviteCode && (
-              <p className="text-sm text-gray-400 mt-1">
-                Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
-              </p>
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-1">
+                <span>
+                  Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
+                </span>
+                <button
+                  onClick={handleCopyInviteCode}
+                  title="Copy Invite Code"
+                  className="text-blue-300 hover:text-blue-500 transition-colors"
+                >
+                  <FaClipboard />
+                </button>
+                {copied && <span className="text-green-400 text-xs">Copied!</span>}
+              </div>
             )}
+          </div>
+          {/*Users list*/}
+          <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 className="text-xl font-semibold mb-4 text-[#8B0000] border-b border-gray-700 pb-2 flex items-center gap-2">
+              <FaUser /> Users
+            </h3>
+            <ul className="space-y-2">
+              {(userList || []).map((user, index) => (
+                <li key={index} className="flex items-center space-x-2 bg-gray-700 p-2 rounded-md">
+                  <span className="text-white">{user.name}</span>
+                  {user.is_admin && <FaCrown className="text-[#8B0000]" title="Admin" />}
+                </li>
+              ))}
+            </ul>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
