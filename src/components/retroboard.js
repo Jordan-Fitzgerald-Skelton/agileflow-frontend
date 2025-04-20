@@ -251,14 +251,14 @@ const RetroBoard = () => {
           </div>
           {/*Users list*/}
           <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-            <h3 className="text-xl font-semibold mb-4 text-[#8B0000] border-b border-gray-700 pb-2 flex items-center gap-2">
+            <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0] border-b border-gray-700 pb-2 flex items-center gap-2">
               <FaUser /> Users
             </h3>
             <ul className="space-y-2">
               {(userList || []).map((user, index) => (
                 <li key={index} className="flex items-center space-x-2 bg-gray-700 p-2 rounded-md">
                   <span className="text-white">{user.name}</span>
-                  {user.is_admin && <FaCrown className="text-[#8B0000]" title="Admin" />}
+                  {user.is_admin && <FaCrown className="text-[#E0E0E0]" title="Admin" />}
                 </li>
               ))}
             </ul>

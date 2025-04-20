@@ -238,7 +238,7 @@ const RefinementBoard = () => {
             {/* Users list */}
             <div className="md:col-span-1">
               <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#8B0000] border-b border-gray-700 pb-2 flex items-center gap-2">
+              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0] border-b border-gray-700 pb-2 flex items-center gap-2">
                 <FaUser /> Users
               </h3>
                 <ul className="space-y-2">
@@ -246,7 +246,7 @@ const RefinementBoard = () => {
                     <li key={index} className="bg-gray-700 p-3 rounded-md flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-white">{user.name}</span>
-                        {user.is_admin && <FaCrown className="text-[#8B0000]" title="Admin" />}
+                        {user.is_admin && <FaCrown className="text-[#E0E0E0]" title="Admin" />}
                       </div>
                       {user.role && <span className="text-blue-300 text-sm bg-blue-900/30 px-2 py-1 rounded">{user.role}</span>}
                     </li>

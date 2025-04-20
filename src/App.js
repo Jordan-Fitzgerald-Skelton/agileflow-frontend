@@ -58,7 +58,7 @@ function App() {
         <div className="min-h-screen bg-[#121212]">
           <header className="bg-[#1C1C1C] text-[#E0E0E0] py-4">
             <div className="container mx-auto flex justify-between items-center">
-              <h1 className="text-white font-bold">AgileFlow</h1>
+              <h1 className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">AgileFlow</h1>
               <nav className="mt-4 flex space-x-6">
                 <NavLink to="/" className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">Home</NavLink>
                 <NavLink to="/retro-board" className="text-[#E0E0E0] text-lg px-4 py-2 hover:bg-[#1C1C1C] rounded">Retro Board</NavLink>
