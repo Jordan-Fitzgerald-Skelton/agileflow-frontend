@@ -301,28 +301,37 @@ export const SocketProvider = ({ children }) => {
     return null;
   }, [roomId, socket, isConnected, request]);
 
-  const createAction = useCallback(async (description) => {
+  const createAction = useCallback(async (description, assigneeId) => {
     if (!roomId || !user) {
       setError("No room ID or user not authenticated");
       return null;
     }
-
+    let assignee_name = user.name;
+    if (assigneeId) {
+      const selectedUser = userList.find(u => u.id === assigneeId);
+      if (selectedUser) {
+        assignee_name = selectedUser.name;
+      }
+    }
+  
     const data = await request("/retro/create/action", "POST", { 
       room_id: roomId, 
-      user_name: user.name, 
-      description 
+      user_name: user.name,
+      description,
+      assignee_name
     });
-
+  
     if (data && socket && isConnected) {
       socket.emit("create_action", { 
         room_id: roomId, 
         user_name: user.name, 
-        description 
+        description,
+        assignee_name
       });
       return data;
     }
     return null;
-  }, [roomId, user, socket, isConnected, request]);
+  }, [roomId, user, socket, isConnected, request, userList]);
 
   // =================== Advanced socket subscription ===================
   const subscribe = useCallback((event, callback) => {

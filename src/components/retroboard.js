@@ -30,6 +30,7 @@ const RetroBoard = () => {
   const [didntGoWellInput, setDidntGoWellInput] = useState('');
   const [improvementInput, setImprovementInput] = useState('');
   const [actionInput, setActionInput] = useState('');
+  const [selectedAssignee, setSelectedAssignee] = useState('');
 
   // Categorized comments
   const [goWellComments, setGoWellComments] = useState([]);
@@ -110,10 +111,10 @@ const RetroBoard = () => {
   // Handle creating an action item (admin only)
   const handleCreateAction = async () => {
     if (!actionInput.trim() || !isAdmin) return;
-    
     try {
-      await createAction(actionInput);
+      await createAction(actionInput, selectedAssignee || null);
       setActionInput('');
+      setSelectedAssignee('');
     } catch (err) {
       console.error('Error creating action:', err);
       setLocalError('Failed to create action. Please try again.');
@@ -356,21 +357,35 @@ const RetroBoard = () => {
               Action Items
             </h3>
             {isAdmin && (
-              <div className="flex space-x-2 mb-4">
-                <input
-                  type="text"
-                  placeholder="Add action item"
-                  value={actionInput}
-                  onChange={(e) => setActionInput(e.target.value)}
-                  className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
-                />
-                <button
-                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
-                  onClick={handleCreateAction}
-                  disabled={loading}
-                >
-                  Add Action
-                </button>
+              <div className="flex flex-col space-y-3 mb-4">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Add action item"
+                    value={actionInput}
+                    onChange={(e) => setActionInput(e.target.value)}
+                    className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                  />
+                  <select
+                    value={selectedAssignee}
+                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                    className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                  >
+                    <option value="">Assign to...</option>
+                    {(userList || []).map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                    onClick={handleCreateAction}
+                    disabled={loading}
+                  >
+                    Add Action
+                  </button>
+                </div>
               </div>
             )}
             <ul className="space-y-2">
