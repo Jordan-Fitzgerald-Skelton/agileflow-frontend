@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useSocket } from '../context/SocketContext';
-import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo, FaTrophy } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { useSocket } from "../context/SocketContext";
+import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo, FaTrophy } from "react-icons/fa";
 
 const RefinementBoard = () => {
   const {
@@ -19,23 +19,19 @@ const RefinementBoard = () => {
     subscribe
   } = useSocket();
 
-  // Local state for room management
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [localError, setLocalError] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Refinement specific state
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
   const [prediction, setPrediction] = useState('');
 
-  // Roles available for selection
   const roles = ['UI', 'DEV', 'PRODUCT', 'ARCH', 'UX', 'QA'];
 
-  // Check if user is admin when userList changes
+  //checks if user is the admin when the userList changes
   useEffect(() => {
     if (userList && userList.length > 0) {
       const currentUser = userList.find(user => user.email === localStorage.getItem('userEmail'));
@@ -43,21 +39,17 @@ const RefinementBoard = () => {
     }
   }, [userList]);
 
-  // Subscribe to prediction submissions
   useEffect(() => {
     if (!isConnected || !roomId) return;
-
     const unsubscribe = subscribe('prediction_submitted', (data) => {
       if (data.role === selectedRole) {
         setHasSubmitted(true);
       }
     });
-
     return () => unsubscribe();
   }, [isConnected, roomId, selectedRole, subscribe]);
 
-  // Handle room creation
-  const handleCreateRoom = async () => {
+  const createRoom = async () => {
     try {
       setLocalError('');
       const result = await createAndJoinRefinementRoom();
@@ -70,13 +62,11 @@ const RefinementBoard = () => {
     }
   };
 
-  // Handle joining room
-  const handleJoinRoom = async () => {
+  const joinRoom = async () => {
     if (!inviteCodeInput.trim()) {
       setLocalError('Please enter a valid invite code.');
       return;
     }
-    
     try {
       setLocalError('');
       const result = await joinRefinementRoom(inviteCodeInput);
@@ -91,15 +81,15 @@ const RefinementBoard = () => {
     }
   };
 
-  const handleCopyInviteCode = () => {
+  const copyInviteCode = () => {
     if (!contextInviteCode) return;
     navigator.clipboard.writeText(contextInviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Room cleanup when leaving
-  const handleLeaveRoom = () => {
+  //cleanup when a user leaving
+  const exitRoom = () => {
     leaveRoom();
     setIsInRoom(false);
     setIsAdmin(false);
@@ -110,8 +100,7 @@ const RefinementBoard = () => {
     setPrediction('');
   };
 
-  // Handle prediction submission
-  const handleSubmitPrediction = async (e) => {
+  const predictionSubmission  = async (e) => {
     e.preventDefault();
     if (!selectedRole || !prediction) return;
     
@@ -124,10 +113,9 @@ const RefinementBoard = () => {
     }
   };
 
-  // Handle revealing results (admin only)
-  const handleRevealResults = async () => {
+
+  const finalResults = async () => {
     if (!isAdmin) return;
-    
     try {
       const results = await getPredictions();
       if (results) setShowResults(true);
@@ -137,7 +125,7 @@ const RefinementBoard = () => {
     }
   };
 
-  // Reset session (admin only)
+  //This lets the admin reset the submission status
   const handleResetSession = () => {
     setHasSubmitted(false);
     setShowResults(false);
@@ -147,12 +135,11 @@ const RefinementBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-gray-200 p-4 relative">
-      {/* Header and Leave Room Button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-blue-400">Refinement Board</h1>
         {isInRoom && (
           <button
-            onClick={handleLeaveRoom}
+            onClick={exitRoom}
             className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
           >
             Leave Room
@@ -166,7 +153,7 @@ const RefinementBoard = () => {
             <div>
               <h2 className="text-xl font-semibold mb-4">Create a new Refinement Room</h2>
               <button
-                onClick={handleCreateRoom}
+                onClick={createRoom}
                 className="w-full bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 transition-colors"
                 disabled={loading}
               >
@@ -194,7 +181,7 @@ const RefinementBoard = () => {
                   className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
-                  onClick={handleJoinRoom}
+                  onClick={joinRoom}
                   className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors"
                   disabled={loading}
                 >
@@ -212,7 +199,6 @@ const RefinementBoard = () => {
         </div>
       ) : (
         <div className="container mx-auto">
-          {/* Room info */}
           <div className="mb-6 text-center">
             <p className="text-sm text-gray-400">
               Room ID: <span className="font-mono">{roomId}</span>
@@ -223,7 +209,7 @@ const RefinementBoard = () => {
                   Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
                 </span>
                 <button
-                  onClick={handleCopyInviteCode}
+                  onClick={copyInviteCode}
                   title="Copy Invite Code"
                   className="text-blue-300 hover:text-blue-500 transition-colors"
                 >
@@ -235,7 +221,7 @@ const RefinementBoard = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Users list */}
+            {/*User list*/}
             <div className="md:col-span-1">
               <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
               <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0] border-b border-gray-700 pb-2 flex items-center gap-2">
@@ -255,7 +241,7 @@ const RefinementBoard = () => {
               </div>
             </div>
             
-            {/* Main content */}
+            {/*Main Div*/}
             <div className="md:col-span-3">
               {isAdmin ? (
                 <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
@@ -295,7 +281,7 @@ const RefinementBoard = () => {
                     
                     <div className="flex gap-4">
                       <button
-                        onClick={handleRevealResults}
+                        onClick={finalResults}
                         disabled={showResults}
                         className={`flex items-center gap-2 ${showResults ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-md transition-colors`}
                       >
@@ -317,7 +303,7 @@ const RefinementBoard = () => {
                   <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
                     <h3 className="text-xl font-semibold mb-4 text-green-400 border-b border-gray-700 pb-2">Submit Your Prediction</h3>
                     
-                    <form onSubmit={handleSubmitPrediction} className="space-y-6">
+                    <form onSubmit={predictionSubmission } className="space-y-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Select Your Role:</label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -376,7 +362,6 @@ const RefinementBoard = () => {
                 )
               )}
 
-              {/* Results display (visible to everyone when revealed) */}
               {showResults && predictions && predictions.length > 0 && (
                 <div className="bg-gray-800 rounded-lg shadow-lg p-4">
                   <h3 className="text-xl font-semibold mb-6 text-yellow-400 border-b border-gray-700 pb-2 flex items-center gap-2">
@@ -384,7 +369,6 @@ const RefinementBoard = () => {
                   </h3>
                   
                   <div className="space-y-6">
-                    {/* Bar chart visualization */}
                     <div className="space-y-4">
                       {[...predictions].sort((a, b) => b.final_prediction - a.final_prediction).map((result, index) => (
                         <div key={result.role} className="flex items-center space-x-2">
@@ -403,7 +387,6 @@ const RefinementBoard = () => {
                       ))}
                     </div>
                     
-                    {/* Table view */}
                     <div className="overflow-x-auto">
                       <table className="min-w-full bg-gray-700 rounded-lg overflow-hidden">
                         <thead>

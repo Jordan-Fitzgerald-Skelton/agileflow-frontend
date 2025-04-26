@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 import { io } from "socket.io-client";
 import { useAuth0 } from "@auth0/auth0-react";
 
-const SERVER_URL = process.env.BACK_APP || "http://localhost:5000";
+const SERVER_URL = process.env.BACK_APP;
 const SocketContext = createContext();
 
 export const useSocket = () => {
@@ -26,7 +26,7 @@ export const SocketProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Initialize WebSocket
+  //start the websocket
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -42,7 +42,7 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(true);
       setError(null);
       
-      // Rejoin room if we were in one before reconnecting
+      //this will let you rejoin a room if we were in one before reconnecting
       if (roomId && inviteCode && user) {
         socketInstance.emit("join_room", { 
           invite_code: inviteCode, 
@@ -62,17 +62,15 @@ export const SocketProvider = ({ children }) => {
       setError(err?.message || "Socket error");
     });
 
-    // Room events
     socketInstance.on("user_list", (users) => {
       console.log("Received user list:", users);
       setUserList(users);
     });
 
-    // Refinement events
+    //refinement socket events
     socketInstance.on("prediction_submitted", (data) => {
       console.log("Prediction submitted:", data);
       setPredictions(prev => {
-        // Replace prediction if role exists, otherwise add new
         const exists = prev.findIndex(p => p.role === data.role);
         if (exists >= 0) {
           const newPredictions = [...prev];
@@ -83,7 +81,7 @@ export const SocketProvider = ({ children }) => {
       });
     });
 
-    // Retro events
+    //retro socket events
     socketInstance.on("new_comment", (comment) => {
       console.log("New comment received:", comment);
       setComments(prev => [...prev, comment]);
@@ -93,17 +91,16 @@ export const SocketProvider = ({ children }) => {
       console.log("New action received:", action);
       setActions(prev => [...prev, action]);
     });
-    
+
     socketInstance.on("room_created", (roomData) => {
       console.log("Room created:", roomData);
     });
-    
+
     socketInstance.on("action_created", (actionData) => {
       console.log("Action created:", actionData);
     });
 
     setSocket(socketInstance);
-
     return () => {
       if (socketInstance) {
         socketInstance.disconnect();
@@ -111,24 +108,19 @@ export const SocketProvider = ({ children }) => {
     };
   }, [isAuthenticated, roomId, inviteCode, user]);
 
-  // =================== Helper for API Calls ===================
   const request = useCallback(async (url, method, body = null) => {
     setLoading(true);
     setError(null);
-    
     try {
       const res = await fetch(`${SERVER_URL}${url}`, {
         method,
         headers: { "Content-Type": "application/json" },
         body: body ? JSON.stringify(body) : null,
       });
-      
       const data = await res.json();
-      
       if (!data.success) {
         throw new Error(data.message || "Request failed");
       }
-      
       return data;
     } catch (error) {
       console.error(`API Error (${url}):`, error);
@@ -139,13 +131,12 @@ export const SocketProvider = ({ children }) => {
     }
   }, []);
 
-  // =================== Room Management ===================
+  //functions for joining and creating rooms 
   const createAndJoinRefinementRoom = useCallback(async () => {
     if (!user) {
       setError("User not authenticated");
       return null;
     }
-
     const data = await request(`/refinement/create/room`, "POST");
     if (data) {
       setRoomId(data.room_id);
@@ -161,17 +152,14 @@ export const SocketProvider = ({ children }) => {
       setError("User not authenticated");
       return null;
     }
-
     const data = await request(`/refinement/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code,
     });
-
     if (data) {
       setRoomId(data.room_id);
       setInviteCode(invite_code);
-      
       if (socket && isConnected) {
         socket.emit("join_room", { 
           invite_code, 
@@ -179,7 +167,6 @@ export const SocketProvider = ({ children }) => {
           email: user.email 
         });
       }
-      
       return data;
     }
     return null;
@@ -190,7 +177,6 @@ export const SocketProvider = ({ children }) => {
       setError("User not authenticated");
       return null;
     }
-
     const data = await request(`/retro/create/room`, "POST");
     if (data) {
       setRoomId(data.room_id);
@@ -206,17 +192,14 @@ export const SocketProvider = ({ children }) => {
       setError("User not authenticated");
       return null;
     }
-
     const data = await request(`/retro/join/room`, "POST", {
       name: user.name,
       email: user.email,
       invite_code,
     });
-
     if (data) {
       setRoomId(data.room_id);
       setInviteCode(invite_code);
-      
       if (socket && isConnected) {
         socket.emit("join_room", { 
           invite_code, 
@@ -224,18 +207,16 @@ export const SocketProvider = ({ children }) => {
           email: user.email 
         });
       }
-      
       return data;
     }
     return null;
   }, [user, socket, isConnected, request]);
 
+
   const leaveRoom = useCallback(() => {
     if (!roomId || !socket || !isConnected) return;
-    
     socket.emit("leave_room", { roomId });
     console.log(`Left room: ${roomId}`);
-    
     setRoomId(null);
     setInviteCode(null);
     setPredictions([]);
@@ -244,19 +225,17 @@ export const SocketProvider = ({ children }) => {
     setUserList([]);
   }, [roomId, socket, isConnected]);
 
-  // =================== Refinement ===================
+
   const submitPrediction = useCallback(async (role, prediction) => {
     if (!roomId) {
       setError("No room ID set");
       return null;
     }
-
     const data = await request("/refinement/prediction/submit", "POST", { 
       room_id: roomId, 
       role, 
       prediction 
     });
-
     if (data && socket && isConnected) {
       socket.emit("submit_prediction", { 
         room_id: roomId, 
@@ -268,12 +247,12 @@ export const SocketProvider = ({ children }) => {
     return null;
   }, [roomId, socket, isConnected, request]);
 
+
   const getPredictions = useCallback(async () => {
     if (!roomId) {
       setError("No room ID set");
       return null;
     }
-
     const data = await request(`/refinement/get/predictions?room_id=${roomId}`, "GET");
     if (data) {
       setPredictions(data.predictions);
@@ -282,24 +261,23 @@ export const SocketProvider = ({ children }) => {
     return null;
   }, [roomId, request]);
 
-  // =================== Retro ===================
+
   const addComment = useCallback(async (comment) => {
     if (!roomId) {
       setError("No room ID set");
       return null;
     }
-
     const data = await request("/retro/new/comment", "POST", { 
       room_id: roomId, 
       comment 
     });
-
     if (data && socket && isConnected) {
       socket.emit("new_comment", { room_id: roomId, comment });
       return data;
     }
     return null;
   }, [roomId, socket, isConnected, request]);
+
 
   const createAction = useCallback(async (description, assigneeId) => {
     if (!roomId || !user) {
@@ -313,14 +291,12 @@ export const SocketProvider = ({ children }) => {
         assignee_name = selectedUser.name;
       }
     }
-  
     const data = await request("/retro/create/action", "POST", { 
       room_id: roomId, 
       user_name: user.name,
       description,
       assignee_name
     });
-  
     if (data && socket && isConnected) {
       socket.emit("create_action", { 
         room_id: roomId, 
@@ -333,7 +309,7 @@ export const SocketProvider = ({ children }) => {
     return null;
   }, [roomId, user, socket, isConnected, request, userList]);
 
-  // =================== Advanced socket subscription ===================
+  //listens for incomming socket events 
   const subscribe = useCallback((event, callback) => {
     if (!socket) return () => {};
     
@@ -344,9 +320,9 @@ export const SocketProvider = ({ children }) => {
     return () => socket.off(event);
   }, [socket]);
 
-  // =================== Memoized Context Value ===================
+  //this stores all the socket iformation and uses a memeory
+  //so that only the necessary values are changed when updated
   const contextValue = useMemo(() => ({
-    // Socket state
     socket,
     isConnected,
     roomId,
@@ -354,32 +330,25 @@ export const SocketProvider = ({ children }) => {
     userList,
     error,
     loading,
-
-    // Data state
     predictions,
     comments,
     actions,
     
-    // Room management
     createAndJoinRefinementRoom,
     createAndJoinRetroRoom,
     joinRefinementRoom,
     joinRetroRoom,
     leaveRoom,
     
-    // Refinement operations
     submitPrediction,
     getPredictions,
     
-    // Retro operations
     addComment,
     createAction,
-    
-    // Advanced usage
+
     subscribe,
     clearError: () => setError(null),
-    
-    // Reset state
+
     resetData: () => {
       setPredictions([]);
       setComments([]);
@@ -394,6 +363,7 @@ export const SocketProvider = ({ children }) => {
     subscribe
   ]);
 
+  //allows for this file to be used by other componenets 
   return (
     <SocketContext.Provider value={contextValue}>
       {children}

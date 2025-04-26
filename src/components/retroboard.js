@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useSocket } from '../context/SocketContext';
-import { FaClipboard, FaUser, FaCrown } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { useSocket } from "../context/SocketContext";
+import { FaClipboard, FaUser, FaCrown } from "react-icons/fa";
 
 const RetroBoard = () => {
   const {
@@ -18,28 +18,23 @@ const RetroBoard = () => {
     userList,
   } = useSocket();
 
-  // Local state for room management
   const [inviteCodeInput, setInviteCodeInput] = useState('');
   const [localError, setLocalError] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  // Controlled inputs for comment and action entries
+  //Comment sections
   const [goWellInput, setGoWellInput] = useState('');
   const [didntGoWellInput, setDidntGoWellInput] = useState('');
   const [improvementInput, setImprovementInput] = useState('');
   const [actionInput, setActionInput] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState('');
-
-  // Categorized comments
   const [goWellComments, setGoWellComments] = useState([]);
   const [didntGoWellComments, setDidntGoWellComments] = useState([]);
   const [improvementComments, setImprovementComments] = useState([]);
   const [retroActions, setRetroActions] = useState([]);
 
-  // Handle room creation
-  const handleCreateRoom = async () => {
+  const createRoom = async () => {
     try {
       setLocalError('');
       const result = await createAndJoinRetroRoom();
@@ -52,13 +47,11 @@ const RetroBoard = () => {
     }
   };
 
-  // Handle joining room
-  const handleJoinRoom = async () => {
+  const joinRoom = async () => {
     if (!inviteCodeInput.trim()) {
       setLocalError('Please enter a valid invite code.');
       return;
     }
-    
     try {
       setLocalError('');
       const result = await joinRetroRoom(inviteCodeInput);
@@ -73,22 +66,19 @@ const RetroBoard = () => {
     }
   };
 
-  const handleCopyInviteCode = () => {
+  const copyInviteCode = () => {
     if (!contextInviteCode) return;
     navigator.clipboard.writeText(contextInviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Handle adding comments
-  const handleAddComment = async (category, comment) => {
+  const newComment = async (category, comment) => {
     if (!comment.trim()) return;
-    
     try {
       const commentText = `${category}: ${comment}`;
       await addComment(commentText);
-      
-      // Clear input after sending
+      // Clear the input box after sending the comment
       switch (category) {
         case 'WhatWentWell':
           setGoWellInput('');
@@ -108,8 +98,7 @@ const RetroBoard = () => {
     }
   };
 
-  // Handle creating an action item (admin only)
-  const handleCreateAction = async () => {
+  const newAction = async () => {
     if (!actionInput.trim() || !isAdmin) return;
     try {
       await createAction(actionInput, selectedAssignee || null);
@@ -121,8 +110,8 @@ const RetroBoard = () => {
     }
   };
 
-  // Room cleanup when leaving
-  const handleLeaveRoom = () => {
+   //cleanup when a user leaving
+  const exitRoom = () => {
     leaveRoom();
     setIsInRoom(false);
     setIsAdmin(false);
@@ -133,9 +122,8 @@ const RetroBoard = () => {
     setRetroActions([]);
   };
 
-  // Process comments when they change
   useEffect(() => {
-    // Process and categorize all comments
+    //Identifies where the new comments go
     const wellComments = [];
     const didntWellComments = [];
     const improvementComments = [];
@@ -157,19 +145,17 @@ const RetroBoard = () => {
     setImprovementComments(improvementComments);
   }, [comments]);
 
-  // Process actions when they change
   useEffect(() => {
     setRetroActions(actions);
   }, [actions]);
 
   return (
     <div className="min-h-screen bg-[#121212] text-gray-200 p-4 relative">
-      {/* Header and Leave Room Button */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-blue-400">Retro Board</h1>
         {isInRoom && (
           <button
-            onClick={handleLeaveRoom}
+            onClick={exitRoom}
             className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
           >
             Leave Room
@@ -183,7 +169,7 @@ const RetroBoard = () => {
             <div>
               <h2 className="text-xl font-semibold mb-4">Create a new Retro Room</h2>
               <button
-                onClick={handleCreateRoom}
+                onClick={createRoom}
                 className="w-full bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 transition-colors"
                 disabled={loading}
               >
@@ -211,7 +197,7 @@ const RetroBoard = () => {
                   className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
-                  onClick={handleJoinRoom}
+                  onClick={joinRoom}
                   className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors"
                   disabled={loading}
                 >
@@ -229,7 +215,6 @@ const RetroBoard = () => {
         </div>
       ) : (
         <div className="container mx-auto">
-          {/* Room info */}
           <div className="mb-6 text-center">
             <p className="text-sm text-gray-400">
               Room ID: <span className="font-mono">{roomId}</span>
@@ -240,7 +225,7 @@ const RetroBoard = () => {
                   Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
                 </span>
                 <button
-                  onClick={handleCopyInviteCode}
+                  onClick={copyInviteCode}
                   title="Copy Invite Code"
                   className="text-blue-300 hover:text-blue-500 transition-colors"
                 >
@@ -250,7 +235,7 @@ const RetroBoard = () => {
               </div>
             )}
           </div>
-          {/*Users list*/}
+          {/*user list*/}
           <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
             <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0] border-b border-gray-700 pb-2 flex items-center gap-2">
               <FaUser /> Users
@@ -266,7 +251,7 @@ const RetroBoard = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* What went well */}
+            {/*what went well*/}
             <div className="bg-gray-800 rounded-lg shadow-lg p-4">
               <h3 className="text-xl font-semibold mb-4 text-green-400 border-b border-gray-700 pb-2">
                 What Went Well
@@ -281,7 +266,7 @@ const RetroBoard = () => {
                 />
                 <button
                   className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                  onClick={() => handleAddComment('WhatWentWell', goWellInput)}
+                  onClick={() => newComment('WhatWentWell', goWellInput)}
                   disabled={loading}
                 >
                   Add
@@ -294,7 +279,7 @@ const RetroBoard = () => {
               </ul>
             </div>
 
-            {/* What didn't go well */}
+            {/*what didn't go well*/}
             <div className="bg-gray-800 rounded-lg shadow-lg p-4">
               <h3 className="text-xl font-semibold mb-4 text-red-400 border-b border-gray-700 pb-2">
                 What Didn't Go Well
@@ -309,7 +294,7 @@ const RetroBoard = () => {
                 />
                 <button
                   className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                  onClick={() => handleAddComment('WhatDidntGoWell', didntGoWellInput)}
+                  onClick={() => newComment('WhatDidntGoWell', didntGoWellInput)}
                   disabled={loading}
                 >
                   Add
@@ -322,7 +307,7 @@ const RetroBoard = () => {
               </ul>
             </div>
 
-            {/* Areas for improvement */}
+            {/*areas for improvement*/}
             <div className="bg-gray-800 rounded-lg shadow-lg p-4">
               <h3 className="text-xl font-semibold mb-4 text-blue-400 border-b border-gray-700 pb-2">
                 Areas for Improvement
@@ -337,7 +322,7 @@ const RetroBoard = () => {
                 />
                 <button
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                  onClick={() => handleAddComment('AreasForImprovement', improvementInput)}
+                  onClick={() => newComment('AreasForImprovement', improvementInput)}
                   disabled={loading}
                 >
                   Add
@@ -351,7 +336,7 @@ const RetroBoard = () => {
             </div>
           </div>
           
-          {/* Actions section */}
+          {/*action section */}
           <div className="bg-gray-800 rounded-lg shadow-lg p-4">
             <h3 className="text-xl font-semibold mb-4 text-purple-400 border-b border-gray-700 pb-2">
               Action Items
@@ -380,7 +365,7 @@ const RetroBoard = () => {
                   </select>
                   <button
                     className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
-                    onClick={handleCreateAction}
+                    onClick={newAction}
                     disabled={loading}
                   >
                     Add Action
