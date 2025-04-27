@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 import { io } from "socket.io-client";
 import { useAuth0 } from "@auth0/auth0-react";
 
-const SERVER_URL = process.env.BACK_APP;
+const SERVER_URL = process.env.REACT_APP_BACK_APP;
 const SocketContext = createContext();
 
 export const useSocket = () => {
