@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
-import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo, FaTrophy } from "react-icons/fa";
+import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo } from "react-icons/fa";
 
 const RefinementBoard = () => {
   const {
@@ -14,7 +14,8 @@ const RefinementBoard = () => {
     loading,
     leaveRoom,
     userList,
-    predictions,
+    resetSession,
+    revealResults,
     isConnected,
     subscribe
   } = useSocket();
@@ -28,25 +29,32 @@ const RefinementBoard = () => {
   const [showResults, setShowResults] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
   const [prediction, setPrediction] = useState('');
+  const [localPredictions, setLocalPredictions] = useState([]);
 
   const roles = ['UI', 'DEV', 'PRODUCT', 'ARCH', 'UX', 'QA'];
 
-  //checks if user is the admin when the userList changes
-  useEffect(() => {
-    if (userList && userList.length > 0) {
-      const currentUser = userList.find(user => user.email === localStorage.getItem('userEmail'));
-      setIsAdmin(currentUser && currentUser.is_admin);
-    }
-  }, [userList]);
-
   useEffect(() => {
     if (!isConnected || !roomId) return;
-    const unsubscribe = subscribe('prediction_submitted', (data) => {
+    const prediction = subscribe('prediction_submitted', (data) => {
       if (data.role === selectedRole) {
         setHasSubmitted(true);
       }
     });
-    return () => unsubscribe();
+    const reset = subscribe('session_reset', () => {
+      setHasSubmitted(false);
+      setShowResults(false); 
+      setSelectedRole('');
+      setPrediction('');
+    });
+    const results = subscribe('results_revealed', (revealedPredictions) => {
+      setShowResults(true);
+      setLocalPredictions(revealedPredictions);
+    });
+    return () => {
+      prediction();
+      reset();
+      results();
+    };
   }, [isConnected, roomId, selectedRole, subscribe]);
 
   const createRoom = async () => {
@@ -103,7 +111,6 @@ const RefinementBoard = () => {
   const predictionSubmission  = async (e) => {
     e.preventDefault();
     if (!selectedRole || !prediction) return;
-    
     try {
       await submitPrediction(selectedRole, parseInt(prediction));
       setHasSubmitted(true);
@@ -113,24 +120,27 @@ const RefinementBoard = () => {
     }
   };
 
-
   const finalResults = async () => {
-    if (!isAdmin) return;
     try {
       const results = await getPredictions();
-      if (results) setShowResults(true);
+      if (results) {
+        revealResults(results);
+        setShowResults(true);
+      }
     } catch (err) {
       console.error('Reveal failed:', err);
       setLocalError('Failed to reveal results. Please try again.');
     }
   };
 
-  //This lets the admin reset the submission status
+  //This lets the admin reset the subssions that were submitted
   const handleResetSession = () => {
-    setHasSubmitted(false);
-    setShowResults(false);
-    setSelectedRole('');
-    setPrediction('');
+    if (isAdmin && resetSession()) {
+      setHasSubmitted(false);
+      setShowResults(false);
+      setSelectedRole('');
+      setPrediction('');
+    }
   };
 
   return (
@@ -251,16 +261,19 @@ const RefinementBoard = () => {
                     <div>
                       <h4 className="text-lg font-medium mb-2 text-blue-300">Submission Status</h4>
                       <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
-                        <div 
+                        <div
                           className="bg-blue-500 h-4 rounded-full transition-all duration-500"
                           style={{
-                            width: `${userList && userList.length && userList.filter(u => !u.is_admin).length > 0 ? 
-                              (userList.filter(u => u.hasSubmitted).length / userList.filter(u => !u.is_admin).length) * 100 : 0}%`
+                            width: `${
+                              (userList.slice(1).filter(u => u.hasSubmitted).length /
+                              Math.max(1, userList.slice(1).length)) *
+                              100
+                            }%`,
                           }}
                         ></div>
                       </div>
                       <p className="text-sm text-gray-300">
-                        {userList && userList.filter(u => u.hasSubmitted).length} of {userList && userList.filter(u => !u.is_admin).length} participants have submitted
+                        {userList.slice(1).filter(u => u.hasSubmitted).length} of {userList.slice(1).length} participants have submitted
                       </p>
                     </div>
                     
@@ -362,15 +375,15 @@ const RefinementBoard = () => {
                 )
               )}
 
-              {showResults && predictions && predictions.length > 0 && (
+              {showResults && localPredictions && localPredictions.length > 0 && (
                 <div className="bg-gray-800 rounded-lg shadow-lg p-4">
-                  <h3 className="text-xl font-semibold mb-6 text-yellow-400 border-b border-gray-700 pb-2 flex items-center gap-2">
-                    <FaTrophy /> Final Results
+                  <h3 className="text-xl font-semibold mb-6 text-white-400 border-b border-gray-700 pb-2 flex items-center gap-2">
+                    Final Results
                   </h3>
                   
                   <div className="space-y-6">
                     <div className="space-y-4">
-                      {[...predictions].sort((a, b) => b.final_prediction - a.final_prediction).map((result, index) => (
+                      {[...localPredictions].sort((a, b) => b.final_prediction - a.final_prediction).map((result, index) => (
                         <div key={result.role} className="flex items-center space-x-2">
                           <div className="w-20 text-right font-medium">{result.role}</div>
                           <div className="flex-1 bg-gray-700 rounded-full h-6 relative">
@@ -382,7 +395,7 @@ const RefinementBoard = () => {
                               {result.final_prediction}
                             </span>
                           </div>
-                          {index === 0 && <FaTrophy className="text-yellow-400 text-xl" />}
+                          {index === 0}
                         </div>
                       ))}
                     </div>
@@ -396,7 +409,7 @@ const RefinementBoard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {predictions.map((result, index) => (
+                          {localPredictions.map((result, index) => (
                             <tr key={result.role} className={index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-750'}>
                               <td className="px-4 py-3 border-b border-gray-600">{result.role}</td>
                               <td className="px-4 py-3 border-b border-gray-600 font-medium">

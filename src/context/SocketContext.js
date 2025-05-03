@@ -79,6 +79,21 @@ export const SocketProvider = ({ children }) => {
         }
         return [...prev, data];
       });
+      setUserList(prev => prev.map(user => {
+        if (user.role === data.role) {
+          return { ...user, hasSubmitted: true };
+        }
+        return user;
+      }));
+    });
+
+    socketInstance.on("session_reset", () => {
+      console.log("Session reset received");
+    });
+    
+    socketInstance.on("results_revealed", (predictions) => {
+      console.log("Results revealed received:", predictions);
+      setPredictions(predictions);
     });
 
     //retro socket events
@@ -261,6 +276,26 @@ export const SocketProvider = ({ children }) => {
     return null;
   }, [roomId, request]);
 
+  const resetSession = useCallback(() => {
+    if (!roomId || !socket || !isConnected) {
+      setError("Cannot reset session: not connected to a room");
+      return false;
+    }
+    
+    socket.emit("reset_session", { room_id: roomId });
+    return true;
+  }, [roomId, socket, isConnected]);
+  
+  const revealResults = useCallback((predictions) => {
+    if (!roomId || !socket || !isConnected) {
+      setError("Cannot reveal results: not connected to a room");
+      return false;
+    }
+    
+    socket.emit("reveal_results", { room_id: roomId, predictions });
+    return true;
+  }, [roomId, socket, isConnected]);
+
 
   const addComment = useCallback(async (comment) => {
     if (!roomId) {
@@ -342,6 +377,8 @@ export const SocketProvider = ({ children }) => {
     
     submitPrediction,
     getPredictions,
+    resetSession,
+    revealResults,
     
     addComment,
     createAction,
@@ -359,8 +396,8 @@ export const SocketProvider = ({ children }) => {
     error, loading, predictions, comments, actions,
     createAndJoinRefinementRoom, createAndJoinRetroRoom,
     joinRefinementRoom, joinRetroRoom, leaveRoom,
-    submitPrediction, getPredictions, addComment, createAction,
-    subscribe
+    submitPrediction, getPredictions, resetSession,revealResults, 
+    addComment, createAction,subscribe
   ]);
 
   //allows for this file to be used by other componenets 
