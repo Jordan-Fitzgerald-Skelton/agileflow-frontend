@@ -210,10 +210,12 @@ const RefinementBoard = () => {
       ) : (
         <div className="container mx-auto">
           <div className="mb-6 text-center">
-            <p className="text-sm text-gray-400">
-              Room ID: <span className="font-mono">{roomId}</span>
-            </p>
-            {contextInviteCode && (
+            {isAdmin && (
+              <p className="text-sm text-gray-400">
+                Room ID: <span className="font-mono">{roomId}</span>
+              </p>
+            )}
+            {contextInviteCode && isAdmin && (
               <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-1">
                 <span>
                   Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
