@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
-import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo } from "react-icons/fa";
+import { FaClipboard, FaUser, FaCrown, FaChartBar, FaRedo, FaExclamationTriangle } from "react-icons/fa";
 
 const RefinementBoard = () => {
   const {
@@ -30,6 +30,7 @@ const RefinementBoard = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [prediction, setPrediction] = useState('');
   const [localPredictions, setLocalPredictions] = useState([]);
+  const [validationError, setValidationError] = useState('');
 
   const roles = ['UI', 'DEV', 'PRODUCT', 'ARCH', 'UX', 'QA'];
 
@@ -108,12 +109,30 @@ const RefinementBoard = () => {
     setPrediction('');
   };
 
-  const predictionSubmission  = async (e) => {
+  const predictionSubmission = async (e) => {
     e.preventDefault();
     if (!selectedRole || !prediction) return;
+    
+    const predictionNum = parseInt(prediction);
+    if (isNaN(predictionNum)) {
+      setValidationError('Please enter a valid number');
+      return;
+    }
+    
+    if (predictionNum < 1) {
+      setValidationError('Prediction cannot be negative or zero');
+      return;
+    }
+    
+    if (predictionNum > 100) {
+      setValidationError('Prediction is too large (maximum is 100)');
+      return;
+    }
+    
     try {
-      await submitPrediction(selectedRole, parseInt(prediction));
+      await submitPrediction(selectedRole, predictionNum);
       setHasSubmitted(true);
+      setValidationError('');
     } catch (err) {
       console.error('Submit failed:', err);
       setLocalError('Failed to submit prediction. Please try again.');
@@ -344,12 +363,22 @@ const RefinementBoard = () => {
                         <input
                           type="number"
                           value={prediction}
-                          onChange={(e) => setPrediction(e.target.value)}
+                          onChange={(e) => {
+                            setPrediction(e.target.value);
+                            setValidationError('');
+                          }}
                           disabled={!selectedRole}
-                          min="1"
+                          min="0"
+                          max="100"
                           required
                           className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
+                        {validationError && (
+                          <p className="mt-2 text-red-400 text-sm flex items-center gap-1">
+                            <FaExclamationTriangle />
+                            {validationError}
+                          </p>
+                        )}
                       </div>
                       
                       <button 
