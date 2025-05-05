@@ -107,10 +107,6 @@ export const SocketProvider = ({ children }) => {
       setActions(prev => [...prev, action]);
     });
 
-    socketInstance.on("room_created", (roomData) => {
-      console.log("Room created:", roomData);
-    });
-
     socketInstance.on("action_created", (actionData) => {
       console.log("Action created:", actionData);
     });

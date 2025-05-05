@@ -148,7 +148,7 @@ const RefinementBoard = () => {
       }
     } catch (err) {
       console.error('Reveal failed:', err);
-      setLocalError('Failed to reveal results. Please try again.');
+      setLocalError('Failed to show results. Please try again.');
     }
   };
 
@@ -319,7 +319,7 @@ const RefinementBoard = () => {
                         disabled={showResults}
                         className={`flex items-center gap-2 ${showResults ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-md transition-colors`}
                       >
-                        <FaChartBar /> {showResults ? 'Results Revealed' : 'Reveal Results'}
+                        <FaChartBar /> {showResults ? 'Results Revealed' : 'Show Results'}
                       </button>
                       <button
                         onClick={handleResetSession}
@@ -397,10 +397,10 @@ const RefinementBoard = () => {
                 ) : (
                   <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 text-center">
                     <h3 className="text-xl font-semibold mb-4 text-blue-400">
-                      {!showResults ? "You've submitted your prediction" : "Results Revealed"}
+                      {!showResults ? "You've submitted your prediction" : "Results"}
                     </h3>
                     <p className="text-gray-300">
-                      {!showResults ? "Waiting for the admin to reveal results..." : "Check out the final results below!"}
+                      {!showResults ? "Waiting for the admin to show the results..." : "Check out the final results below!"}
                     </p>
                   </div>
                 )
