@@ -298,21 +298,6 @@ const RefinementBoard = () => {
                       </p>
                     </div>
                     
-                    <div>
-                      <h4 className="text-lg font-medium mb-2 text-blue-300">Role Distribution</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {roles.map(role => {
-                          const count = userList && userList.filter(p => p.role === role).length;
-                          return count > 0 ? (
-                            <div key={role} className="bg-gray-700 px-3 py-1 rounded-md flex items-center gap-2">
-                              <span>{role}</span>
-                              <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">{count}</span>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                    </div>
-                    
                     <div className="flex gap-4">
                       <button
                         onClick={finalResults}
