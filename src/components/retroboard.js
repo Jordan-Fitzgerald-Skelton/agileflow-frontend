@@ -265,6 +265,7 @@ const RetroBoard = () => {
                   value={goWellInput}
                   onChange={(e) => setGoWellInput(e.target.value)}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                  onKeyDown={(e) => e.key === 'Enter' && newComment('WhatWentWell', goWellInput)}
                 />
                 <button
                   className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
@@ -276,7 +277,7 @@ const RetroBoard = () => {
               </div>
               <ul className="space-y-2">
                 {goWellComments.map((comment, index) => (
-                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md break-words">{comment}</li>
                 ))}
               </ul>
             </div>
@@ -293,6 +294,7 @@ const RetroBoard = () => {
                   value={didntGoWellInput}
                   onChange={(e) => setDidntGoWellInput(e.target.value)}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                  onKeyDown={(e) => e.key === 'Enter' && newComment('WhatDidntGoWell', didntGoWellInput)}
                 />
                 <button
                   className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
@@ -304,7 +306,7 @@ const RetroBoard = () => {
               </div>
               <ul className="space-y-2">
                 {didntGoWellComments.map((comment, index) => (
-                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md break-words">{comment}</li>
                 ))}
               </ul>
             </div>
@@ -321,6 +323,7 @@ const RetroBoard = () => {
                   value={improvementInput}
                   onChange={(e) => setImprovementInput(e.target.value)}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                  onKeyDown={(e) => e.key === 'Enter' && newComment('AreasForImprovement', improvementInput)}
                 />
                 <button
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
@@ -332,7 +335,7 @@ const RetroBoard = () => {
               </div>
               <ul className="space-y-2">
                 {improvementComments.map((comment, index) => (
-                  <li key={index} className="bg-gray-700 p-3 rounded-md">{comment}</li>
+                  <li key={index} className="bg-gray-700 p-3 rounded-md break-words">{comment}</li>
                 ))}
               </ul>
             </div>
@@ -352,6 +355,7 @@ const RetroBoard = () => {
                     value={actionInput}
                     onChange={(e) => setActionInput(e.target.value)}
                     className="flex-1 bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+                    onKeyDown={(e) => e.key === 'Enter' && newAction()}
                   />
                   <select
                     value={selectedAssignee}

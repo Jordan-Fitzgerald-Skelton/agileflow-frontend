@@ -46,13 +46,20 @@ export function InfoHome() {
               </h3>
               <p className="text-[#E0E0E0]">
                 The Refinement Board is designed to help teams with calculating the estimated time that they believe a ticket should take 
-                to complete during each part of its development. e.g A ticket is created a new filter button for a list on a table. 
-                Each member of the dev team would provided an estimated time they believe this change should take to complete. All of their 
-                estimates would be collected and an average generated. Then the members of the QA team would provided an estimated time they 
-                believe this ticket should take to test. Their estimates would be collected and an average generated. The ticket would then be 
+                to complete during each part of its development. An example of how a normal refinment meeting would take place: 
+                <br>
+                </br>
+                A ticket is created 
+                a new filter button for a list on a table. For this ticket an esitmate from the backend dev and QA teams would be needed.
+                Each member of the dev team would provided an estimated time they believe this change should take to complete via a direct message to the team lead. 
+                All of their estimates would be collected and an average calculated. Then the members of the QA team would provided an estimated time they 
+                believe this ticket should take to test. Their estimates would be collected and an average calculated. The ticket would then be 
                 assigned a estimated completion time based on adding both averaged estimates together. The tickets description of the 
-                ticket is updated with the total average and the breakdown for both the dev team and the QA team. My refinment board aims 
-                to allow for this processto be completed simultaneously and automatically calculate and present the predictions in a readable format.
+                ticket is updated with the total average and the breakdown for both the dev team and the QA team. 
+                <br>
+                </br>
+                My refinment board aims to allow for both the backend devs and QA memebers to submit their predictions simultaneously and automatically 
+                calculate and present the predictions in a readable format.
                 <br>
                 </br>
                 Below is an example of what a final output would look like
@@ -115,14 +122,20 @@ export function InfoHome() {
                 What is the Retro Board for?
               </h3>
               <p className="text-[#E0E0E0]">
-                The Retro Board is designed to help teams review the sprint that took place by providing feedback under 3 different heading.
-                They are "what went well", "what didn't go well" and "areas of improvement". After discussing these topics a new item is created
-                under a heading called "actions". These "actions" are a task that is assigned to the member of the team to complete, that should help
-                the team improve the processes for the next sprint. An example "action" would be to create a document to describe a the release process
-                for a particular change that needs to be completed correctly in order for a smooth release to occur. The "actions" are typically created 
-                manually by a team lead and a member of the team assigned. Once assigned they recieve a notifications abou the ticket. My retro board aims to combine 
-                this functionality by allowing for users to provide feedback under each heading and to automatically create the notifications for the "action" 
-                that needs to be completed to the assigned member of the team.
+                The Retro Board is designed to help teams review the sprint that took place by providing feedback and create action to be completed
+                to help make the next sprint more effective. An example of how a normal retrospective meeting would take place:
+                <br>
+                </br>
+                Members of the team would leave comments under 3 different heading, "what went well", "what didn't go well" and "areas of improvement". 
+                After discussing these topics a new item is created under a heading called "actions". These "actions" are a task that is assigned to the member 
+                of the team to complete, that should help the team improve the processes for the next sprint. An example "action" would be to create a document to describe a the release process
+                for a particular change that needs to be completed correctly in order for a smooth release to occur. The "actions" are typically 
+                created as tickets manually by a team lead. Once created the team lead assignes a member of the team and they recieve a notifications 
+                about the ticket. 
+                <br>
+                </br>
+                My retro board aims to combine this functionality by allowing for users to provide feedback under each heading and to automatically 
+                create the notifications for the "action" that needs to be completed to the assigned member of the team using dircet email notifications.
               </p>
               {/*shows the different boxes*/}
               <div className="mt-6 grid grid-cols-4 gap-2">
