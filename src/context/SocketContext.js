@@ -20,15 +20,16 @@ export const SocketProvider = ({ children }) => {
   const [roomId, setRoomId] = useState(null);
   const [inviteCode, setInviteCode] = useState(null);
   const [userList, setUserList] = useState([]);
-  const [predictions, setPredictions] = useState([]);
+  const [predictions, setPredictions] = useState([]); // Tracks individual prediction submissions if needed by UI before reveal
+  const [finalPredictions, setFinalPredictions] = useState([]); // Stores aggregated/revealed prediction results
   const [comments, setComments] = useState([]);
   const [actions, setActions] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [roomStatusMessage, setRoomStatusMessage] = useState(null); // Displays messages like 'room closed', 'room expired'
 
-  //start the websocket
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user) return; // Socket connection requires authenticated user with details
 
     const socketInstance = io(SERVER_URL, {
       reconnectionAttempts: 5,
@@ -41,9 +42,10 @@ export const SocketProvider = ({ children }) => {
       console.log("Connected to WebSocket:", socketInstance.id);
       setIsConnected(true);
       setError(null);
+      setRoomStatusMessage(null); // Clear any previous room status messages
       
-      //this will let you rejoin a room if we were in one before reconnecting
-      if (roomId && inviteCode && user) {
+      // If already in a room (e.g., after a reconnect), rejoin automatically
+      if (roomId && inviteCode && user.name && user.email) {
         socketInstance.emit("join_room", { 
           invite_code: inviteCode, 
           name: user.name, 
@@ -64,61 +66,81 @@ export const SocketProvider = ({ children }) => {
 
     socketInstance.on("user_list", (users) => {
       console.log("Received user list:", users);
-      setUserList(users);
+      setUserList(users); // Server provides the authoritative list of users and their submission status
     });
 
-    //refinement socket events
+    // Refinement room socket event handlers
     socketInstance.on("prediction_submitted", (data) => {
-      console.log("Prediction submitted:", data);
-      setPredictions(prev => {
-        const exists = prev.findIndex(p => p.role === data.role);
-        if (exists >= 0) {
-          const newPredictions = [...prev];
-          newPredictions[exists] = data;
-          return newPredictions;
-        }
-        return [...prev, data];
-      });
-      setUserList(prev => prev.map(user => {
-        if (user.role === data.role) {
-          return { ...user, hasSubmitted: true };
-        }
-        return user;
-      }));
+      console.log("Prediction submitted (event from server):", data);
+      // This event signals a prediction was made. The 'user_list' event typically updates UI regarding who submitted.
+      // Individual prediction values are usually not shown until 'results_revealed'.
     });
 
     socketInstance.on("session_reset", () => {
       console.log("Session reset received");
+      setPredictions([]); 
+      setFinalPredictions([]); 
+      // The 'user_list' event from the server will reflect reset submission statuses.
     });
     
-    socketInstance.on("results_revealed", (predictions) => {
-      console.log("Results revealed received:", predictions);
-      setPredictions(predictions);
+    socketInstance.on("results_revealed", (revealedPredictions) => {
+      console.log("Results revealed received:", revealedPredictions);
+      setFinalPredictions(revealedPredictions); // Update state with the final, aggregated predictions
     });
 
-    //retro socket events
+    // Retro room socket event handlers
+    socketInstance.on("initial_comments", (initialComments) => {
+      console.log("Initial comments received:", initialComments);
+      setComments(initialComments); // Load existing comments when joining a retro room
+    });
+
     socketInstance.on("new_comment", (comment) => {
       console.log("New comment received:", comment);
       setComments(prev => [...prev, comment]);
     });
 
-    socketInstance.on("action_added", (action) => {
-      console.log("New action received:", action);
+    socketInstance.on("comment_updated", (updatedComment) => {
+      console.log("Comment updated received:", updatedComment);
+      setComments(prev => prev.map(c => c.id === updatedComment.id ? updatedComment : c));
+    });
+
+    socketInstance.on("comment_deleted", ({ comment_id }) => {
+      console.log("Comment deleted received:", comment_id);
+      setComments(prev => prev.filter(c => c.id !== comment_id));
+    });
+
+    socketInstance.on("action_added", (action) => { 
+      console.log("New action received (action_added):", action);
       setActions(prev => [...prev, action]);
     });
 
-    socketInstance.on("action_created", (actionData) => {
-      console.log("Action created:", actionData);
+    // Handlers for server-initiated room status changes
+    socketInstance.on("room_closed", (data) => {
+      console.log("Room closed:", data.message);
+      setRoomStatusMessage(data.message || "This room has been closed by the host.");
     });
 
+    socketInstance.on("room_expired", (data) => {
+      console.log("Room expired:", data.message);
+      setRoomStatusMessage(data.message || "This room has expired and been closed.");
+    });
+
+    socketInstance.on("server_shutdown", (data) => {
+      console.log("Server shutdown:", data.message);
+      setRoomStatusMessage(data.message || "Server is shutting down. Please try again later.");
+    });
+    
     setSocket(socketInstance);
+
+    // Cleanup function: disconnect socket when component unmounts or dependencies change
     return () => {
       if (socketInstance) {
         socketInstance.disconnect();
       }
     };
-  }, [isAuthenticated, roomId, inviteCode, user]);
+  }, [isAuthenticated, user, roomId, inviteCode]); // Effect dependencies
 
+  // Generic HTTP request utility function
   const request = useCallback(async (url, method, body = null) => {
     setLoading(true);
     setError(null);
@@ -129,230 +151,250 @@ export const SocketProvider = ({ children }) => {
         body: body ? JSON.stringify(body) : null,
       });
       const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.message || "Request failed");
+      if (!res.ok || !data.success) { // Check both HTTP status and application-level success flag
+        throw new Error(data.message || `Request failed with status ${res.status}`);
       }
       return data;
-    } catch (error) {
-      console.error(`API Error (${url}):`, error);
-      setError(error.message);
+    } catch (err) {
+      console.error(`API Error (${url}):`, err);
+      setError(err.message);
+      // If the error message indicates a room status issue, reflect it in roomStatusMessage
+      if (err.message.includes("expired") || err.message.includes("finished") || err.message.includes("closed")) {
+        setRoomStatusMessage(err.message);
+      }
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // Empty dependency array as SERVER_URL is a constant defined outside this scope
 
-  //functions for joining and creating rooms 
-  const createAndJoinRefinementRoom = useCallback(async () => {
-    if (!user) {
-      setError("User not authenticated");
+  // Helper function to emit 'join_room' socket event and update local state
+  const emitJoinRoom = useCallback((currentInviteCode, currentRoomId) => {
+    if (socket && isConnected && user && user.name && user.email && currentInviteCode && currentRoomId) {
+      socket.emit("join_room", { 
+        invite_code: currentInviteCode, 
+        name: user.name, 
+        email: user.email,
+      });
+      setRoomId(currentRoomId);
+      setInviteCode(currentInviteCode);
+      // Reset data from any previous room
+      setPredictions([]);
+      setFinalPredictions([]);
+      setComments([]);
+      setActions([]);
+      setUserList([]);
+      setRoomStatusMessage(null);
+      setError(null);
+    }
+  }, [socket, isConnected, user]);
+
+  // Function to create a new room via HTTP POST
+  const createRoom = useCallback(async (roomType) => {
+    if (!user || !user.name || !user.email) {
+      setError("User not authenticated or user details missing");
       return null;
     }
-    const data = await request(`/refinement/create/room`, "POST");
-    if (data) {
-      setRoomId(data.room_id);
-      setInviteCode(data.invite_code);
-      await joinRefinementRoom(data.invite_code);
+    const endpoint = "/create/room"; // Server uses a single endpoint for room creation
+    const data = await request(endpoint, "POST", { room_type });
+
+    if (data && data.room_id && data.invite_code) {
+      // After successful HTTP creation, join the room via WebSocket
+      emitJoinRoom(data.invite_code, data.room_id);
       return data;
     }
     return null;
-  }, [user, request]);
+  }, [user, request, emitJoinRoom]);
 
-  const joinRefinementRoom = useCallback(async (invite_code) => {
-    if (!user) {
-      setError("User not authenticated");
+  // Specific room creation functions, delegating to the generic createRoom
+  const createAndJoinRefinementRoom = useCallback(() => createRoom('refinement'), [createRoom]);
+  const createAndJoinRetroRoom = useCallback(() => createRoom('retro'), [createRoom]);
+
+  // Function to join an existing room via HTTP POST
+  const joinRoom = useCallback(async (invite_code_to_join) => {
+    if (!user || !user.name || !user.email) {
+      setError("User not authenticated or user details missing");
       return null;
     }
-    const data = await request(`/refinement/join/room`, "POST", {
+    const data = await request(`/join/room`, "POST", {
       name: user.name,
       email: user.email,
-      invite_code,
+      invite_code: invite_code_to_join,
     });
-    if (data) {
-      setRoomId(data.room_id);
-      setInviteCode(invite_code);
-      if (socket && isConnected) {
-        socket.emit("join_room", { 
-          invite_code, 
-          name: user.name, 
-          email: user.email 
-        });
-      }
+
+    if (data && data.room_id) {
+      // After successful HTTP join, confirm join via WebSocket
+      emitJoinRoom(invite_code_to_join, data.room_id);
       return data;
     }
     return null;
-  }, [user, socket, isConnected, request]);
+  }, [user, request, emitJoinRoom]);
+  
+  // Specific room joining functions, delegating to the generic joinRoom
+  const joinRefinementRoom = useCallback((invite_code_to_join) => joinRoom(invite_code_to_join), [joinRoom]);
+  const joinRetroRoom = useCallback((invite_code_to_join) => joinRoom(invite_code_to_join), [joinRoom]);
 
-  const createAndJoinRetroRoom = useCallback(async () => {
-    if (!user) {
-      setError("User not authenticated");
-      return null;
-    }
-    const data = await request(`/retro/create/room`, "POST");
-    if (data) {
-      setRoomId(data.room_id);
-      setInviteCode(data.invite_code);
-      await joinRetroRoom(data.invite_code);
-      return data;
-    }
-    return null;
-  }, [user, request]);
-
-  const joinRetroRoom = useCallback(async (invite_code) => {
-    if (!user) {
-      setError("User not authenticated");
-      return null;
-    }
-    const data = await request(`/retro/join/room`, "POST", {
-      name: user.name,
-      email: user.email,
-      invite_code,
-    });
-    if (data) {
-      setRoomId(data.room_id);
-      setInviteCode(invite_code);
-      if (socket && isConnected) {
-        socket.emit("join_room", { 
-          invite_code, 
-          name: user.name, 
-          email: user.email 
-        });
-      }
-      return data;
-    }
-    return null;
-  }, [user, socket, isConnected, request]);
-
-
+  // Function to leave the current room
   const leaveRoom = useCallback(() => {
     if (!roomId || !socket || !isConnected) return;
-    socket.emit("leave_room", { roomId });
+    socket.emit("leave_room", { roomId }); // Notify server
     console.log(`Left room: ${roomId}`);
+    // Reset local room-specific state
     setRoomId(null);
     setInviteCode(null);
     setPredictions([]);
+    setFinalPredictions([]);
     setComments([]);
     setActions([]);
     setUserList([]);
+    setRoomStatusMessage(null); 
   }, [roomId, socket, isConnected]);
 
-
-  const submitPrediction = useCallback(async (role, prediction) => {
-    if (!roomId) {
-      setError("No room ID set");
+  // Function to submit a prediction in a refinement room
+  const submitPrediction = useCallback(async (role, predictionValue) => {
+    if (!roomId || !user || !user.name) { 
+      setError("No room ID set or user details missing");
       return null;
     }
+    // Persist prediction via HTTP POST
     const data = await request("/refinement/prediction/submit", "POST", { 
       room_id: roomId, 
+      name: user.name, 
       role, 
-      prediction 
+      prediction: predictionValue 
     });
+
     if (data && socket && isConnected) {
+      // Emit socket event to notify other users in real-time (server will broadcast 'prediction_submitted')
       socket.emit("submit_prediction", { 
         room_id: roomId, 
+        name: user.name, 
         role, 
-        prediction 
+        prediction: predictionValue 
       });
+      // The server's 'user_list' event will update hasSubmitted status for users.
       return data;
     }
     return null;
-  }, [roomId, socket, isConnected, request]);
+  }, [roomId, user, socket, isConnected, request]);
 
-
+  // Function to fetch final aggregated predictions for a refinement room
   const getPredictions = useCallback(async () => {
     if (!roomId) {
       setError("No room ID set");
       return null;
     }
     const data = await request(`/refinement/get/predictions?room_id=${roomId}`, "GET");
-    if (data) {
-      setPredictions(data.predictions);
+    if (data && data.predictions) { 
+      setFinalPredictions(data.predictions); 
       return data.predictions;
     }
     return null;
   }, [roomId, request]);
 
+  // Function to trigger a session reset in a refinement room
   const resetSession = useCallback(() => {
     if (!roomId || !socket || !isConnected) {
       setError("Cannot reset session: not connected to a room");
       return false;
     }
-    
     socket.emit("reset_session", { room_id: roomId });
+    // Client-side state (predictions, finalPredictions) is cleared by the 'session_reset' socket event handler.
     return true;
   }, [roomId, socket, isConnected]);
   
-  const revealResults = useCallback((predictions) => {
+  // Function to trigger revealing results in a refinement room
+  const revealResults = useCallback((predictionsToReveal) => { 
     if (!roomId || !socket || !isConnected) {
       setError("Cannot reveal results: not connected to a room");
       return false;
     }
-    
-    socket.emit("reveal_results", { room_id: roomId, predictions });
+    socket.emit("reveal_results", { room_id: roomId, predictions: predictionsToReveal });
+    // Client-side state (finalPredictions) is updated by the 'results_revealed' socket event handler.
     return true;
   }, [roomId, socket, isConnected]);
 
-
-  const addComment = useCallback(async (comment) => {
-    if (!roomId) {
-      setError("No room ID set");
+  // Function to add a new comment in a retro room
+  const addComment = useCallback(async (commentText) => {
+    if (!roomId || !user || !user.name || !user.email) { 
+      setError("No room ID set or user details missing");
       return null;
     }
+    // HTTP POST handles database save; server then broadcasts "new_comment" event
     const data = await request("/retro/new/comment", "POST", { 
       room_id: roomId, 
-      comment 
+      comment: commentText,
+      user_name: user.name, 
+      email: user.email     
     });
-    if (data && socket && isConnected) {
-      socket.emit("new_comment", { room_id: roomId, comment });
-      return data;
-    }
-    return null;
-  }, [roomId, socket, isConnected, request]);
+    return data; 
+  }, [roomId, user, request]);
 
-
-  const createAction = useCallback(async (description, assigneeId) => {
-    if (!roomId || !user) {
-      setError("No room ID or user not authenticated");
+  // Function to update an existing comment in a retro room
+  const updateComment = useCallback(async (commentId, newCommentText) => {
+    if (!roomId || !user || !user.name) {
+      setError("Cannot update comment: missing info or not authenticated.");
       return null;
     }
-    let assignee_name = user.name;
-    if (assigneeId) {
-      const selectedUser = userList.find(u => u.id === assigneeId);
-      if (selectedUser) {
-        assignee_name = selectedUser.name;
-      }
+    // HTTP PUT handles update; server then broadcasts "comment_updated" event
+    const data = await request("/retro/update/comment", "PUT", {
+      comment_id: commentId,
+      comment: newCommentText,
+      user_name: user.name, 
+      room_id: roomId       
+    });
+    return data;
+  }, [roomId, user, request]);
+
+  // Function to delete a comment in a retro room
+  const deleteComment = useCallback(async (commentId) => {
+    if (!roomId || !user || !user.name) {
+      setError("Cannot delete comment: missing info or not authenticated.");
+      return null;
     }
+    // HTTP DELETE handles deletion; server then broadcasts "comment_deleted" event
+    const data = await request("/retro/delete/comment", "DELETE", {
+      comment_id: commentId,
+      user_name: user.name, 
+      room_id: roomId       
+    });
+    return data;
+  }, [roomId, user, request]);
+
+  // Function to create a new action item in a retro room
+  const createAction = useCallback(async (description, assignee_name_param) => {
+    if (!roomId || !user || !user.name) { 
+      setError("No room ID or user details missing");
+      return null;
+    }
+    const assigneeName = assignee_name_param || user.name; // Default assignee to current user if not specified
+
+    // HTTP POST handles database save; server then broadcasts "action_added" event
     const data = await request("/retro/create/action", "POST", { 
       room_id: roomId, 
-      user_name: user.name,
+      user_name: user.name, // Creator of the action
       description,
-      assignee_name
+      assignee_name: assigneeName // User to whom the action is assigned
     });
-    if (data && socket && isConnected) {
-      socket.emit("create_action", { 
-        room_id: roomId, 
-        user_name: user.name, 
-        description,
-        assignee_name
-      });
-      return data;
-    }
-    return null;
-  }, [roomId, user, socket, isConnected, request, userList]);
+    return data;
+  }, [roomId, user, request]);
 
-  //listens for incomming socket events 
+  // Function for components to subscribe to arbitrary socket events
   const subscribe = useCallback((event, callback) => {
-    if (!socket) return () => {};
+    if (!socket) return () => {}; // No socket instance to subscribe to
     
     console.log(`Subscribing to ${event}`);
-    socket.off(event);
-    socket.on(event, callback);
+    socket.off(event, callback); // Remove previous listener for this exact callback to avoid duplicates
+    socket.on(event, callback);  // Add the new listener
     
-    return () => socket.off(event);
+    // Return a cleanup function to unsubscribe
+    return () => {
+      console.log(`Unsubscribing from ${event}`);
+      socket.off(event, callback); // Remove the specific listener on cleanup
+    };
   }, [socket]);
 
-  //this stores all the socket iformation and uses a memeory
-  //so that only the necessary values are changed when updated
+  // Memoized context value to prevent unnecessary re-renders of consuming components
   const contextValue = useMemo(() => ({
     socket,
     isConnected,
@@ -361,14 +403,16 @@ export const SocketProvider = ({ children }) => {
     userList,
     error,
     loading,
-    predictions,
+    predictions, 
+    finalPredictions, 
     comments,
     actions,
+    roomStatusMessage,
     
     createAndJoinRefinementRoom,
     createAndJoinRetroRoom,
-    joinRefinementRoom,
-    joinRetroRoom,
+    joinRefinementRoom, 
+    joinRetroRoom,   
     leaveRoom,
     
     submitPrediction,
@@ -377,26 +421,32 @@ export const SocketProvider = ({ children }) => {
     revealResults,
     
     addComment,
+    updateComment, 
+    deleteComment, 
     createAction,
 
     subscribe,
     clearError: () => setError(null),
+    clearRoomStatusMessage: () => setRoomStatusMessage(null),
 
+    // Function to reset client-side data stores
     resetData: () => {
       setPredictions([]);
+      setFinalPredictions([]);
       setComments([]);
       setActions([]);
     }
   }), [
     socket, isConnected, roomId, inviteCode, userList, 
-    error, loading, predictions, comments, actions,
+    error, loading, predictions, finalPredictions, comments, actions, roomStatusMessage,
     createAndJoinRefinementRoom, createAndJoinRetroRoom,
     joinRefinementRoom, joinRetroRoom, leaveRoom,
-    submitPrediction, getPredictions, resetSession,revealResults, 
-    addComment, createAction,subscribe
+    submitPrediction, getPredictions, resetSession, revealResults, 
+    addComment, updateComment, deleteComment, createAction, subscribe
+    // Note: `user` is not directly in contextValue but used by many Callbacks which are in contextValue.
+    // Its inclusion in useCallback dependency arrays ensures they get latest `user` details.
   ]);
 
-  //allows for this file to be used by other componenets 
   return (
     <SocketContext.Provider value={contextValue}>
       {children}
