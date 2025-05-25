@@ -163,13 +163,14 @@ const RefinementBoard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] text-gray-200 p-4 relative">
+    <div className="min-h-screen p-4 relative" style={{ backgroundColor: '#121212', color: '#E0E0E0' }}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-blue-400">Refinement Board</h1>
+        <h1 className="text-3xl font-bold" style={{ color: '#03A9F4' }}>Refinement Board</h1>
         {isInRoom && (
           <button
             onClick={exitRoom}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+            className="px-4 py-2 rounded-md transition-colors hover:opacity-90"
+            style={{ backgroundColor: '#F44336', color: '#E0E0E0' }}
           >
             Leave Room
           </button>
@@ -177,13 +178,14 @@ const RefinementBoard = () => {
       </div>
       
       {!isInRoom ? (
-        <div className="max-w-lg mx-auto bg-[#1C1C1C] rounded-lg shadow-lg p-6">
+        <div className="max-w-lg mx-auto rounded-lg shadow-lg p-6" style={{ backgroundColor: '#1E1E1E' }}>
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold mb-4">Create a new Refinement Room</h2>
+              <h2 className="text-xl font-semibold mb-4" style={{ color: '#E0E0E0' }}>Create a new Refinement Room</h2>
               <button
                 onClick={createRoom}
-                className="w-full bg-blue-500 text-white px-4 py-3 rounded-md hover:bg-blue-600 transition-colors"
+                className="w-full px-4 py-3 rounded-md transition-colors hover:opacity-90"
+                style={{ backgroundColor: '#03A9F4', color: '#E0E0E0' }}
                 disabled={loading}
               >
                 {loading ? 'Creating...' : 'Create Room'}
@@ -192,26 +194,33 @@ const RefinementBoard = () => {
             
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-600"></div>
+                <div className="w-full border-t" style={{ borderColor: '#2C2C2C' }}></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-[#1C1C1C] text-gray-400">OR</span>
+                <span className="px-2" style={{ backgroundColor: '#1E1E1E', color: '#B0B0B0' }}>OR</span>
               </div>
             </div>
             
             <div>
-              <h2 className="text-xl font-semibold mb-4">Join an existing Refinement Room</h2>
+              <h2 className="text-xl font-semibold mb-4" style={{ color: '#E0E0E0' }}>Join an existing Refinement Room</h2>
               <div className="space-y-3">
                 <input
                   type="text"
                   placeholder="Enter invite code"
                   value={inviteCodeInput}
                   onChange={(e) => setInviteCodeInput(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border rounded-md px-4 py-3 focus:ring-2 focus:border-transparent transition-colors"
+                  style={{ 
+                    backgroundColor: '#2C2C2C', 
+                    borderColor: '#2C2C2C', 
+                    color: '#E0E0E0',
+                    '--tw-ring-color': '#03A9F4'
+                  }}
                 />
                 <button
                   onClick={joinRoom}
-                  className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 transition-colors"
+                  className="w-full px-4 py-3 rounded-md transition-colors hover:opacity-90"
+                  style={{ backgroundColor: '#4CAF50', color: '#E0E0E0' }}
                   disabled={loading}
                 >
                   {loading ? 'Joining...' : 'Join Room'}
@@ -220,7 +229,11 @@ const RefinementBoard = () => {
             </div>
             
             {(localError || error) && (
-              <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-red-200">
+              <div className="mt-4 p-3 border rounded-md" style={{ 
+                backgroundColor: 'rgba(244, 67, 54, 0.1)', 
+                borderColor: 'rgba(244, 67, 54, 0.3)', 
+                color: '#F44336' 
+              }}>
                 {localError || error}
               </div>
             )}
@@ -230,23 +243,24 @@ const RefinementBoard = () => {
         <div className="container mx-auto">
           <div className="mb-6 text-center">
             {isAdmin && (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm" style={{ color: '#B0B0B0' }}>
                 Room ID: <span className="font-mono">{roomId}</span>
               </p>
             )}
             {contextInviteCode && isAdmin && (
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mt-1">
+              <div className="flex items-center justify-center gap-2 text-sm mt-1" style={{ color: '#B0B0B0' }}>
                 <span>
-                  Invite Code: <span className="font-mono font-bold text-blue-400">{contextInviteCode}</span>
+                  Invite Code: <span className="font-mono font-bold" style={{ color: '#03A9F4' }}>{contextInviteCode}</span>
                 </span>
                 <button
                   onClick={copyInviteCode}
                   title="Copy Invite Code"
-                  className="text-blue-300 hover:text-blue-500 transition-colors"
+                  className="transition-colors hover:opacity-70"
+                  style={{ color: '#03A9F4' }}
                 >
                   <FaClipboard />
                 </button>
-                {copied && <span className="text-green-400 text-xs">Copied!</span>}
+                {copied && <span className="text-xs" style={{ color: '#4CAF50' }}>Copied!</span>}
               </div>
             )}
           </div>
@@ -254,18 +268,28 @@ const RefinementBoard = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/*User list*/}
             <div className="md:col-span-1">
-              <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-              <h3 className="text-xl font-semibold mb-4 text-[#E0E0E0] border-b border-gray-700 pb-2 flex items-center gap-2">
-                <FaUser /> Users
-              </h3>
+              <div className="rounded-lg shadow-lg p-4 mb-6" style={{ backgroundColor: '#1E1E1E' }}>
+                <h3 className="text-xl font-semibold mb-4 pb-2 flex items-center gap-2 border-b" style={{ 
+                  color: '#E0E0E0', 
+                  borderColor: '#2C2C2C' 
+                }}>
+                  <FaUser /> Users
+                </h3>
                 <ul className="space-y-2">
                   {(userList || []).map((user, index) => (
-                    <li key={index} className="bg-gray-700 p-3 rounded-md flex items-center justify-between">
+                    <li key={index} className="p-3 rounded-md flex items-center justify-between" style={{ backgroundColor: '#2C2C2C' }}>
                       <div className="flex items-center gap-2">
-                        <span className="text-white">{user.name}</span>
-                        {user.is_admin && <FaCrown className="text-[#E0E0E0]" title="Admin" />}
+                        <span style={{ color: '#E0E0E0' }}>{user.name}</span>
+                        {user.is_admin && <FaCrown style={{ color: '#FFC107' }} title="Admin" />}
                       </div>
-                      {user.role && <span className="text-blue-300 text-sm bg-blue-900/30 px-2 py-1 rounded">{user.role}</span>}
+                      {user.role && (
+                        <span className="text-sm px-2 py-1 rounded" style={{ 
+                          color: '#03A9F4', 
+                          backgroundColor: 'rgba(3, 169, 244, 0.1)' 
+                        }}>
+                          {user.role}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -275,16 +299,22 @@ const RefinementBoard = () => {
             {/*Main Div*/}
             <div className="md:col-span-3">
               {isAdmin ? (
-                <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-                  <h3 className="text-xl font-semibold mb-4 text-purple-400 border-b border-gray-700 pb-2">Admin Controls</h3>
+                <div className="rounded-lg shadow-lg p-4 mb-6" style={{ backgroundColor: '#1E1E1E' }}>
+                  <h3 className="text-xl font-semibold mb-4 pb-2 border-b" style={{ 
+                    color: '#9C27B0', 
+                    borderColor: '#2C2C2C' 
+                  }}>
+                    Admin Controls
+                  </h3>
                   
                   <div className="space-y-6">
                     <div>
-                      <h4 className="text-lg font-medium mb-2 text-blue-300">Submission Status</h4>
-                      <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
+                      <h4 className="text-lg font-medium mb-2" style={{ color: '#03A9F4' }}>Submission Status</h4>
+                      <div className="w-full rounded-full h-4 mb-2" style={{ backgroundColor: '#2C2C2C' }}>
                         <div
-                          className="bg-blue-500 h-4 rounded-full transition-all duration-500"
+                          className="h-4 rounded-full transition-all duration-500"
                           style={{
+                            backgroundColor: '#03A9F4',
                             width: `${
                               (userList.slice(1).filter(u => u.hasSubmitted).length /
                               Math.max(1, userList.slice(1).length)) *
@@ -293,7 +323,7 @@ const RefinementBoard = () => {
                           }}
                         ></div>
                       </div>
-                      <p className="text-sm text-gray-300">
+                      <p className="text-sm" style={{ color: '#B0B0B0' }}>
                         {userList.slice(1).filter(u => u.hasSubmitted).length} of {userList.slice(1).length} participants have submitted
                       </p>
                     </div>
@@ -302,39 +332,56 @@ const RefinementBoard = () => {
                       <button
                         onClick={finalResults}
                         disabled={showResults}
-                        className={`flex items-center gap-2 ${showResults ? 'bg-gray-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-md transition-colors`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                          showResults ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
+                        }`}
+                        style={{ 
+                          backgroundColor: showResults ? '#2C2C2C' : '#03A9F4', 
+                          color: '#E0E0E0' 
+                        }}
                       >
                         <FaChartBar /> {showResults ? 'Results Revealed' : 'Show Results'}
                       </button>
                       <button
                         onClick={handleResetSession}
-                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 rounded-md transition-colors hover:opacity-90"
+                        style={{ backgroundColor: '#9C27B0', color: '#E0E0E0' }}
                       >
                         <FaRedo /> Reset Session
                       </button>
                     </div>
                     
-                    <p className="text-sm text-gray-400 italic">As admin, you cannot submit predictions.</p>
+                    <p className="text-sm italic" style={{ color: '#B0B0B0' }}>As admin, you cannot submit predictions.</p>
                   </div>
                 </div>
               ) : (
                 !hasSubmitted && !showResults ? (
-                  <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-                    <h3 className="text-xl font-semibold mb-4 text-green-400 border-b border-gray-700 pb-2">Submit Your Prediction</h3>
+                  <div className="rounded-lg shadow-lg p-4 mb-6" style={{ backgroundColor: '#1E1E1E' }}>
+                    <h3 className="text-xl font-semibold mb-4 pb-2 border-b" style={{ 
+                      color: '#4CAF50', 
+                      borderColor: '#2C2C2C' 
+                    }}>
+                      Submit Your Prediction
+                    </h3>
                     
-                    <form onSubmit={predictionSubmission } className="space-y-6">
+                    <form onSubmit={predictionSubmission} className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Select Your Role:</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#E0E0E0' }}>Select Your Role:</label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {roles.map(role => (
                             <button
                               key={role}
                               type="button"
-                              className={`px-4 py-2 rounded-md border ${
+                              className={`px-4 py-2 rounded-md border transition-colors ${
                                 selectedRole === role 
-                                  ? 'bg-blue-600 border-blue-400 text-white' 
-                                  : 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-200'
-                              } transition-colors`}
+                                  ? '' 
+                                  : 'hover:opacity-80'
+                              }`}
+                              style={{
+                                backgroundColor: selectedRole === role ? '#03A9F4' : '#2C2C2C',
+                                borderColor: selectedRole === role ? '#03A9F4' : '#2C2C2C',
+                                color: '#E0E0E0'
+                              }}
                               onClick={() => setSelectedRole(role)}
                             >
                               {role}
@@ -344,7 +391,7 @@ const RefinementBoard = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Your Prediction:</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: '#E0E0E0' }}>Your Prediction:</label>
                         <input
                           type="number"
                           value={prediction}
@@ -356,10 +403,16 @@ const RefinementBoard = () => {
                           min="0"
                           max="100"
                           required
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full border rounded-md px-4 py-3 focus:ring-2 focus:border-transparent transition-colors"
+                          style={{ 
+                            backgroundColor: '#2C2C2C', 
+                            borderColor: '#2C2C2C', 
+                            color: '#E0E0E0',
+                            '--tw-ring-color': '#03A9F4'
+                          }}
                         />
                         {validationError && (
-                          <p className="mt-2 text-red-400 text-sm flex items-center gap-1">
+                          <p className="mt-2 text-sm flex items-center gap-1" style={{ color: '#F44336' }}>
                             <FaExclamationTriangle />
                             {validationError}
                           </p>
@@ -369,22 +422,26 @@ const RefinementBoard = () => {
                       <button 
                         type="submit" 
                         disabled={!selectedRole || !prediction}
-                        className={`w-full ${
+                        className={`w-full px-4 py-3 rounded-md transition-colors ${
                           !selectedRole || !prediction
-                            ? 'bg-gray-600 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700'
-                        } text-white px-4 py-3 rounded-md transition-colors`}
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:opacity-90'
+                        }`}
+                        style={{ 
+                          backgroundColor: !selectedRole || !prediction ? '#2C2C2C' : '#4CAF50', 
+                          color: '#E0E0E0' 
+                        }}
                       >
                         Submit Prediction
                       </button>
                     </form>
                   </div>
                 ) : (
-                  <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 text-center">
-                    <h3 className="text-xl font-semibold mb-4 text-blue-400">
+                  <div className="rounded-lg shadow-lg p-6 mb-6 text-center" style={{ backgroundColor: '#1E1E1E' }}>
+                    <h3 className="text-xl font-semibold mb-4" style={{ color: '#03A9F4' }}>
                       {!showResults ? "You've submitted your prediction" : "Results"}
                     </h3>
-                    <p className="text-gray-300">
+                    <p style={{ color: '#B0B0B0' }}>
                       {!showResults ? "Waiting for the admin to show the results..." : "Check out the final results below!"}
                     </p>
                   </div>
@@ -392,8 +449,11 @@ const RefinementBoard = () => {
               )}
 
               {showResults && localPredictions && localPredictions.length > 0 && (
-                <div className="bg-gray-800 rounded-lg shadow-lg p-4">
-                  <h3 className="text-xl font-semibold mb-6 text-white-400 border-b border-gray-700 pb-2 flex items-center gap-2">
+                <div className="rounded-lg shadow-lg p-4" style={{ backgroundColor: '#1E1E1E' }}>
+                  <h3 className="text-xl font-semibold mb-6 pb-2 flex items-center gap-2 border-b" style={{ 
+                    color: '#E0E0E0', 
+                    borderColor: '#2C2C2C' 
+                  }}>
                     Final Results
                   </h3>
                   
@@ -401,34 +461,36 @@ const RefinementBoard = () => {
                     <div className="space-y-4">
                       {[...localPredictions].sort((a, b) => b.final_prediction - a.final_prediction).map((result, index) => (
                         <div key={result.role} className="flex items-center space-x-2">
-                          <div className="w-20 text-right font-medium">{result.role}</div>
-                          <div className="flex-1 bg-gray-700 rounded-full h-6 relative">
+                          <div className="w-20 text-right font-medium" style={{ color: '#E0E0E0' }}>{result.role}</div>
+                          <div className="flex-1 rounded-full h-6 relative" style={{ backgroundColor: '#2C2C2C' }}>
                             <div
-                              className={`h-6 rounded-full transition-all duration-500 ${index === 0 ? 'bg-yellow-500' : 'bg-blue-500'}`}
-                              style={{ width: `${Math.min(100, (result.final_prediction / 10) * 100)}%` }}
+                              className="h-6 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${Math.min(100, (result.final_prediction / 10) * 100)}%`,
+                                backgroundColor: index === 0 ? '#FFC107' : '#03A9F4'
+                              }}
                             ></div>
-                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold">
+                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold" style={{ color: '#E0E0E0' }}>
                               {result.final_prediction}
                             </span>
                           </div>
-                          {index === 0}
                         </div>
                       ))}
                     </div>
                     
                     <div className="overflow-x-auto">
-                      <table className="min-w-full bg-gray-700 rounded-lg overflow-hidden">
+                      <table className="min-w-full rounded-lg overflow-hidden" style={{ backgroundColor: '#1E1E1E' }}>
                         <thead>
-                          <tr className="bg-gray-600">
-                            <th className="px-4 py-2 text-left text-gray-200">Role</th>
-                            <th className="px-4 py-2 text-left text-gray-200">Average Prediction</th>
+                          <tr style={{ backgroundColor: '#2C2C2C' }}>
+                            <th className="px-4 py-2 text-left" style={{ color: '#E0E0E0' }}>Role</th>
+                            <th className="px-4 py-2 text-left" style={{ color: '#E0E0E0' }}>Average Prediction</th>
                           </tr>
                         </thead>
                         <tbody>
                           {localPredictions.map((result, index) => (
-                            <tr key={result.role} className={index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-750'}>
-                              <td className="px-4 py-3 border-b border-gray-600">{result.role}</td>
-                              <td className="px-4 py-3 border-b border-gray-600 font-medium">
+                            <tr key={result.role} style={{ backgroundColor: index % 2 === 0 ? '#1E1E1E' : '#121212' }}>
+                              <td className="px-4 py-3 border-b" style={{ borderColor: '#2C2C2C', color: '#E0E0E0' }}>{result.role}</td>
+                              <td className="px-4 py-3 border-b font-medium" style={{ borderColor: '#2C2C2C', color: '#E0E0E0' }}>
                                 {result.final_prediction}
                               </td>
                             </tr>
@@ -445,9 +507,9 @@ const RefinementBoard = () => {
       )}
       
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-4 rounded-lg">
-            <p className="text-white">Loading...</p>
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="p-4 rounded-lg" style={{ backgroundColor: '#1E1E1E' }}>
+            <p style={{ color: '#E0E0E0' }}>Loading...</p>
           </div>
         </div>
       )}
